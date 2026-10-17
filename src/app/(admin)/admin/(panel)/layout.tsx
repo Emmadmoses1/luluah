@@ -10,6 +10,7 @@ const NAV: [string, string, string][] = [
   ["/admin/categories", "Categories", "M4 5h7v7H4zM13 5h7v7h-7zM4 14h7v6H4zM13 14h7v6h-7z"],
   ["/admin/orders", "Orders", "M6 3h12l2 5v13H4V8l2-5zM4 8h16M9 12h6"],
   ["/admin/shipping", "Shipping", "M3 7h11v9H3zM14 10h4l3 3v3h-7"],
+  ["/admin/settings", "Store Settings", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-2-4-2 .5-1.5-1L15 4h-4l-.5 2.5-1.5 1L7 7 5 11l2 1v1l-2 1 2 4 2-.5 1.5 1L11 20h4l.5-2.5 1.5-1 2 .5 2-4-2-1v-1z"],
   ["/admin/change-password", "Change password", "M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z"],
 ];
 

@@ -87,3 +87,14 @@ body { -webkit-tap-highlight-color: transparent; }
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .reveal, .reveal-scale, .hero-in > * { opacity: 1 !important; transform: none !important; }
 }
+
+/* ---------- Admin helpers ---------- */
+.a-card { @apply bg-white rounded-2xl border border-neutral-200/70 shadow-sm; }
+.a-input { @apply w-full rounded-xl border border-neutral-300 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-[#c9a96e] focus:ring-4 focus:ring-[#c9a96e]/20; }
+.a-btn { @apply inline-flex items-center justify-center rounded-xl bg-[#0c0a09] px-5 py-2.5 text-sm font-semibold text-[#c9a96e] transition-colors hover:bg-[#c9a96e] hover:text-[#0c0a09]; }
+.a-btn-ghost { @apply inline-flex items-center justify-center rounded-xl border border-neutral-300 px-4 py-2 text-sm font-medium transition-colors hover:border-[#c9a96e] hover:text-[#a8864a]; }
+.a-table { @apply w-full text-sm; }
+.a-table thead { @apply text-left text-[11px] uppercase tracking-wider text-neutral-500 bg-neutral-50; }
+.a-table th, .a-table td { @apply px-4 py-3; }
+.a-table tbody tr { @apply border-t border-neutral-100 transition-colors hover:bg-[#faf6ee]; }
+.a-label { @apply block text-xs font-semibold uppercase tracking-wider text-neutral-500; }

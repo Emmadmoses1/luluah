@@ -7,30 +7,32 @@ export default async function Categories({ searchParams }: { searchParams: Promi
     select c.id, c.slug, c.name_ar, c.sort_order, c.is_active, count(pc.product_id) as n
     from categories c left join product_categories pc on pc.category_id = c.id
     group by c.id order by c.sort_order, c.name_ar`;
-  const input = "border rounded px-2 py-1 bg-white";
   return (
     <>
-      <h1 className="text-2xl font-semibold mb-4">Categories</h1>
-      {q.saved && <p className="bg-green-100 text-green-900 p-2 rounded text-sm mb-3">Saved.</p>}
-      {q.error && <p className="bg-red-100 text-red-900 p-2 rounded text-sm mb-3">
+      <div className="mb-6">
+        <p className="text-xs uppercase tracking-[.25em] text-[#a8864a]">Catalog</p>
+        <h1 className="text-3xl font-semibold mt-1">Categories</h1>
+      </div>
+      {q.saved && <p role="status" className="mb-4 rounded-xl bg-emerald-100 text-emerald-900 px-4 py-3 text-sm">Saved.</p>}
+      {q.error && <p role="alert" className="mb-4 rounded-xl bg-red-100 text-red-900 px-4 py-3 text-sm">
         {q.error === "duplicate" ? "That slug already exists." : "Check the fields: slug must be lowercase English letters, numbers and hyphens."}</p>}
 
-      <form action={createCategory} className="bg-white rounded shadow p-4 mb-6 grid gap-3 md:grid-cols-4 items-end">
-        <label className="text-sm">Arabic name<input name="name_ar" dir="rtl" required className={`${input} w-full mt-1`} /></label>
-        <label className="text-sm">Slug (URL)<input name="slug" required placeholder="new-collection" className={`${input} w-full mt-1`} /></label>
-        <label className="text-sm">Order<input name="sort_order" inputMode="numeric" defaultValue="100" className={`${input} w-full mt-1`} /></label>
-        <button className="bg-neutral-900 text-white px-4 py-2 rounded">Add category</button>
+      <form action={createCategory} className="a-card p-5 mb-6 grid gap-4 md:grid-cols-4 items-end">
+        <label className="a-label">Arabic name<input name="name_ar" dir="rtl" required className="a-input mt-1.5 normal-case tracking-normal font-normal text-neutral-900" /></label>
+        <label className="a-label">Slug (URL)<input name="slug" required placeholder="new-collection" className="a-input mt-1.5 normal-case tracking-normal font-normal text-neutral-900" /></label>
+        <label className="a-label">Order<input name="sort_order" inputMode="numeric" defaultValue="100" className="a-input mt-1.5 normal-case tracking-normal font-normal text-neutral-900" /></label>
+        <button className="a-btn">Add category</button>
       </form>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         {cats.map((c) => (
-          <form key={c.id} action={updateCategory} className="bg-white rounded shadow p-3 flex flex-wrap items-center gap-3">
+          <form key={c.id} action={updateCategory} className="a-card p-4 flex flex-wrap items-center gap-3 hover:shadow-md transition-shadow">
             <input type="hidden" name="id" value={c.id} />
-            <input name="name_ar" dir="rtl" defaultValue={c.name_ar} required className={`${input} flex-1 min-w-[10rem]`} />
-            <span className="text-xs text-neutral-500">{c.slug} · {c.n} products</span>
-            <input name="sort_order" inputMode="numeric" defaultValue={c.sort_order} className={`${input} w-20`} />
-            <label className="text-sm flex items-center gap-1"><input type="checkbox" name="is_active" defaultChecked={c.is_active} /> Active</label>
-            <button className="border px-3 py-1 rounded text-sm">Save</button>
+            <input name="name_ar" dir="rtl" defaultValue={c.name_ar} required className="a-input flex-1 min-w-[10rem]" />
+            <span className="text-xs text-neutral-500 font-mono">{c.slug} · {c.n} products</span>
+            <input name="sort_order" inputMode="numeric" defaultValue={c.sort_order} className="a-input !w-20" aria-label="Sort order" />
+            <label className="text-sm flex items-center gap-2"><input type="checkbox" name="is_active" defaultChecked={c.is_active} className="w-4 h-4 accent-[#a8864a]" /> Active</label>
+            <button className="a-btn-ghost">Save</button>
           </form>
         ))}
       </div>

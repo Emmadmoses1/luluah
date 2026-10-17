@@ -1,31 +1,46 @@
 import Link from "next/link";
 import { sql } from "@/lib/db";
+import Badge from "@/components/admin/Badge";
 
 export default async function Products() {
   const rows = await sql<{ id: string; name_ar: string; sku: string; price_minor: string;
-    status: string; is_demo: boolean; stock: string }[]>`
+    status: string; is_demo: boolean; stock: string; image: string | null }[]>`
     select p.id, p.name_ar, p.sku, p.price_minor, p.status, p.is_demo,
-           coalesce(sum(v.stock), 0) as stock
+           coalesce(sum(v.stock), 0) as stock,
+           (select coalesce(i.thumb_path, i.path) from product_images i where i.product_id = p.id order by i.sort_order, i.id limit 1) as image
     from products p left join product_variants v on v.product_id = p.id
     group by p.id order by p.created_at desc`;
   return (
     <>
-      <div className="flex items-center justify-between mb-6"><h1 className="text-2xl font-semibold">Products</h1><Link href="/admin/products/new" className="bg-neutral-900 text-white px-4 py-2 rounded text-sm">New product</Link></div>
-      <div className="bg-white rounded shadow overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-left text-neutral-500">
-            <tr><th className="p-3">Name</th><th className="p-3">SKU</th><th className="p-3">Price (BHD)</th>
-              <th className="p-3">Stock</th><th className="p-3">Status</th><th className="p-3"></th></tr>
-          </thead>
+      <div className="flex items-end justify-between gap-4 mb-6">
+        <div>
+          <p className="text-xs uppercase tracking-[.25em] text-[#a8864a]">Catalog</p>
+          <h1 className="text-3xl font-semibold mt-1">Products</h1>
+        </div>
+        <Link href="/admin/products/new" className="a-btn">+ New product</Link>
+      </div>
+      <div className="a-card overflow-x-auto">
+        <table className="a-table">
+          <thead><tr><th>Product</th><th>SKU</th><th>Price (BHD)</th><th>Stock</th><th>Status</th><th></th></tr></thead>
           <tbody>
+            {rows.length === 0 && <tr><td colSpan={6} className="text-neutral-500">No products yet.</td></tr>}
             {rows.map((r) => (
-              <tr key={r.id} className="border-t">
-                <td className="p-3" dir="rtl">{r.name_ar}{r.is_demo && <span className="ml-2 text-xs bg-amber-100 px-1">demo</span>}</td>
-                <td className="p-3">{r.sku}</td>
-                <td className="p-3">{(Number(r.price_minor) / 1000).toFixed(3)}</td>
-                <td className="p-3">{r.stock}</td>
-                <td className="p-3">{r.status}</td>
-                <td className="p-3"><Link className="underline" href={`/admin/products/${r.id}`}>Edit</Link></td>
+              <tr key={r.id}>
+                <td>
+                  <div className="flex items-center gap-3">
+                    <span className="w-11 h-14 rounded-lg bg-[#f5f2ec] overflow-hidden shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      {r.image && <img src={r.image} alt="" className="w-full h-full object-cover" />}
+                    </span>
+                    <span dir="rtl">{r.name_ar}</span>
+                    {r.is_demo && <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">DEMO</span>}
+                  </div>
+                </td>
+                <td className="font-mono text-xs">{r.sku}</td>
+                <td className="tabular-nums">{(Number(r.price_minor) / 1000).toFixed(3)}</td>
+                <td className={`tabular-nums ${Number(r.stock) <= 3 ? "text-red-700 font-semibold" : ""}`}>{r.stock}</td>
+                <td><Badge value={r.status} /></td>
+                <td><Link className="a-btn-ghost" href={`/admin/products/${r.id}`}>Edit</Link></td>
               </tr>
             ))}
           </tbody>
