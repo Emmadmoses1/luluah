@@ -6,12 +6,18 @@ import { sql } from "./db";
 const COOKIE = "lu_admin";
 const SESSION_HOURS = 8;
 
-export type Admin = { id: string; email: string; role: "owner" | "manager" | "staff" };
+export type Admin = { id: string; email: string; role: "owner" | "manager" | "staff"; mustChange: boolean };
 
 function scrypt(pw: string, salt: Buffer): Promise<Buffer> {
   return new Promise((res, rej) => scryptCb(pw, salt, 64, (e, k) => (e ? rej(e) : res(k))));
 }
 const sha = (t: string) => createHash("sha256").update(t).digest("hex");
+
+export async function hashPassword(pw: string): Promise<string> {
+  const salt = randomBytes(16);
+  const key = await scrypt(pw, salt);
+  return `scrypt$${salt.toString("hex")}$${key.toString("hex")}`;
+}
 
 export async function verifyPassword(pw: string, stored: string): Promise<boolean> {
   const [alg, saltHex, keyHex] = stored.split("$");
@@ -43,8 +49,8 @@ export async function getAdmin(): Promise<Admin | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   const [a] = await sql<Admin[]>`
-    select u.id, u.email, u.role from admin_sessions s
-    join admin_users u on u.id = s.admin_id
+    select u.id, u.email, u.role, u.must_change_password as "mustChange"
+    from admin_sessions s join admin_users u on u.id = s.admin_id
     where s.token_hash = ${sha(token)} and s.expires_at > now()`;
   return a ?? null;
 }
@@ -52,6 +58,7 @@ export async function getAdmin(): Promise<Admin | null> {
 export async function requireAdmin(roles?: Admin["role"][]): Promise<Admin> {
   const a = await getAdmin();
   if (!a) redirect("/admin/login");
+  if (a.mustChange) redirect("/admin/change-password");
   if (roles && !roles.includes(a.role)) redirect("/admin?denied=1");
   return a;
 }
