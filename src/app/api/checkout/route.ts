@@ -3,6 +3,10 @@ import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import { sql } from "@/lib/db";
 import { BH_REGIONS, shippingFor } from "@/lib/shipping";
+import { evaluateDiscount, normalizeCode, type DiscountRow } from "@/lib/discounts";
+import { sendEmail } from "@/lib/email";
+import { adminNewOrderEmail, orderReceivedEmail } from "@/lib/email-templates";
+import { formatMoney } from "@/lib/currency";
 
 class Fail extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -18,6 +22,7 @@ const Body = z.object({
   customer: z.object({ name: z.string().trim().min(2).max(100), email: z.string().trim().max(200), phone: z.string().trim().min(5).max(30) }),
   address: z.record(z.string(), z.string()).default({}),
   notes: z.string().max(500).default(""),
+  code: z.string().max(40).optional(),
 });
 
 function normalizePhone(raw: string, dial: string, bh: boolean): string | null {
@@ -56,9 +61,10 @@ export async function POST(req: Request) {
   const want = new Map<string, number>();
   for (const i of b.items) want.set(i.variantId, Math.min((want.get(i.variantId) ?? 0) + i.qty, 20));
   const ids = [...want.keys()];
+  const code = b.code ? normalizeCode(b.code) : "";
 
   try {
-    const ref = await sql.begin(async (tx) => {
+    const done = await sql.begin(async (tx) => {
       const [co] = await tx<{ iso2: string; dial_code: string; fee_minor: string; free_over_minor: string | null; min_order_minor: string }[]>`
         select iso2, dial_code, fee_minor, free_over_minor, min_order_minor from countries
         where iso2 = ${b.country} and delivery_enabled`;
@@ -87,15 +93,34 @@ export async function POST(req: Request) {
       if (subtotal < Number(co.min_order_minor)) {
         throw new Fail(400, "قيمة الطلب أقل من الحد الأدنى للتوصيل إلى هذا البلد.");
       }
+
+      let discount = 0;
+      let discountCode: string | null = null;
+      if (code) {
+        const [d] = await tx<DiscountRow[]>`
+          select id, code, kind, value, min_order_minor, max_uses, used_count, starts_at, ends_at, is_active
+          from discounts where code = ${code} for update`;
+        const res = evaluateDiscount(d, subtotal);
+        if (!res.ok) throw new Fail(400, res.error);
+        const used = await tx`update discounts set used_count = used_count + 1
+          where id = ${res.id} and (max_uses is null or used_count < max_uses) returning id`;
+        if (used.length === 0) throw new Fail(409, "تم استخدام رمز الخصم بالكامل.");
+        discount = res.amountMinor;
+        discountCode = res.code;
+      }
+
+      const net = subtotal - discount;
       const shipping = shippingFor(
         { fee_minor: Number(co.fee_minor), free_over_minor: co.free_over_minor === null ? null : Number(co.free_over_minor) },
-        subtotal);
+        net);
+      const total = net + shipping;
+      if (total <= 0) throw new Fail(400, "إجمالي الطلب غير صالح.");
 
       const newOrderRef = newRef();
       const [o] = await tx<{ id: string }[]>`
-        insert into orders (ref, is_test, subtotal_minor, shipping_minor, total_minor, customer_name,
+        insert into orders (ref, is_test, subtotal_minor, discount_minor, discount_code, shipping_minor, total_minor, customer_name,
           customer_email, customer_phone, country_iso2, address, notes, ip)
-        values (${newOrderRef}, ${!LIVE}, ${subtotal}, ${shipping}, ${subtotal + shipping}, ${b.customer.name},
+        values (${newOrderRef}, ${!LIVE}, ${subtotal}, ${discount}, ${discountCode}, ${shipping}, ${total}, ${b.customer.name},
           ${b.customer.email || null}, ${phone}, ${co.iso2}, ${JSON.stringify(address)}::jsonb,
           ${b.notes.trim() || null}, ${ip}) returning id`;
       for (const l of lines) {
@@ -103,9 +128,21 @@ export async function POST(req: Request) {
                  values (${o.id}, ${l.r.id}, ${l.r.name_ar}, ${l.label}, ${l.r.vsku}, ${l.unit}, ${l.qty}, ${l.unit * l.qty})`;
         await tx`update product_variants set stock = stock - ${l.qty} where id = ${l.r.id}`;
       }
-      return newOrderRef;
+      return { ref: newOrderRef, total, country: co.iso2 };
     });
-    return NextResponse.json({ ref });
+
+    const site = (process.env.SITE_URL ?? "").replace(/\/+$/, "");
+    try {
+      if (b.customer.email) {
+        const m = orderReceivedEmail({ name: b.customer.name, ref: done.ref, total: formatMoney(done.total), siteUrl: site });
+        await sendEmail(b.customer.email, m.subject, m.html);
+      }
+      if (process.env.ADMIN_NOTIFY_EMAIL) {
+        const a = adminNewOrderEmail({ ref: done.ref, total: formatMoney(done.total), country: done.country });
+        await sendEmail(process.env.ADMIN_NOTIFY_EMAIL, a.subject, a.html);
+      }
+    } catch { /* email never blocks an order */ }
+    return NextResponse.json({ ref: done.ref });
   } catch (e) {
     if (e instanceof Fail) return NextResponse.json({ error: e.message }, { status: e.status });
     console.error("[checkout]", e instanceof Error ? e.message : e);

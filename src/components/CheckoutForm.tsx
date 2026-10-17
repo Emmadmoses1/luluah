@@ -24,6 +24,9 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
   const [f, setF] = useState<Record<string, string>>({});
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
+  const [codeInput, setCodeInput] = useState("");
+  const [applied, setApplied] = useState<{ code: string; amountMinor: number } | null>(null);
+  const [codeMsg, setCodeMsg] = useState("");
   const c = countries.find((x) => x.iso2 === iso)!;
   const bh = iso === "BH";
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
@@ -43,8 +46,22 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
     return <div className="text-center"><p>سلتك فارغة.</p><Link href="/" className="inline-block mt-4 bg-ink text-gold px-6 py-3">تابع التسوق</Link></div>;
   }
 
-  const shipping = shippingFor(c, subtotal);
+  const discount = applied ? Math.min(applied.amountMinor, subtotal) : 0;
+  const net = subtotal - discount;
+  const shipping = shippingFor(c, net);
   const belowMin = subtotal < c.min_order_minor;
+
+  async function applyCode() {
+    setCodeMsg("");
+    if (!codeInput.trim()) return;
+    try {
+      const r = await fetch("/api/cart", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: readCart(), code: codeInput }) });
+      const d = await r.json();
+      if (d.discountError) { setApplied(null); setCodeMsg(d.discountError); return; }
+      if (d.discountCode) { setApplied({ code: d.discountCode, amountMinor: d.discountMinor }); setCodeMsg("تم تطبيق رمز الخصم."); }
+    } catch { setCodeMsg("تعذّر التحقق من الرمز."); }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,7 +71,7 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
       for (const k of KEYS) address[k] = f[k] ?? "";
       const r = await fetch("/api/checkout", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: readCart(), country: iso,
+        body: JSON.stringify({ items: readCart(), country: iso, code: applied?.code,
           customer: { name: f.name ?? "", email: f.email ?? "", phone: f.phone ?? "" }, address, notes: f.notes ?? "" }),
       });
       const d = await r.json().catch(() => ({}));
@@ -130,17 +147,24 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
             </li>
           ))}
         </ul>
+        <div className="mt-4 flex gap-2">
+          <input value={codeInput} onChange={(e) => setCodeInput(e.target.value)} dir="ltr" placeholder="رمز الخصم"
+            className="flex-1 border border-beige bg-white px-3 py-2 text-sm" />
+          <button type="button" onClick={applyCode} className="border border-ink px-4 text-sm">تطبيق</button>
+        </div>
+        {codeMsg && <p className={`mt-1 text-xs ${applied ? "text-green-700" : "text-red-700"}`}>{codeMsg}</p>}
         <div className="mt-4 space-y-1 text-sm">
           <p className="flex justify-between"><span>المجموع الفرعي</span><span>{formatBHD(subtotal)}</span></p>
+          {discount > 0 && <p className="flex justify-between text-green-800"><span>الخصم</span><span>−{formatBHD(discount)}</span></p>}
           <p className="flex justify-between"><span>الشحن</span><span>{shipping === 0 ? "مجاني" : formatBHD(shipping)}</span></p>
           <p className="flex justify-between font-bold text-base border-t border-beige pt-2">
-            <span>الإجمالي</span><span>{formatBHD(subtotal + shipping)}</span></p>
+            <span>الإجمالي</span><span>{formatBHD(net + shipping)}</span></p>
         </div>
         {c.eta_min_days !== null && c.eta_max_days !== null && (
           <p className="mt-3 text-sm opacity-70">مدة التوصيل المتوقعة: {c.eta_min_days.toLocaleString("ar")}–{c.eta_max_days.toLocaleString("ar")} أيام عمل</p>
         )}
         {belowMin && <p className="mt-3 text-sm text-amber-700">الحد الأدنى للطلب لهذا البلد {formatBHD(c.min_order_minor)}.</p>}
-        <p className="mt-3 text-xs opacity-60">سيتم احتساب المبلغ النهائي والتحقق من التوفر عند تأكيد الطلب.</p>
+        <p className="mt-3 text-xs opacity-60">سيتم احتساب المبلغ النهائي والتحقق من التوفر عند تأكيد الطلب. الأسعار والدفع بالدينار البحريني.</p>
         {err && <p className="mt-4 text-sm text-red-700">{err}</p>}
         <button disabled={busy || belowMin} className="mt-5 w-full bg-ink text-gold py-3 font-bold disabled:opacity-40">
           {busy ? "جارٍ إرسال الطلب…" : "تأكيد الطلب"}

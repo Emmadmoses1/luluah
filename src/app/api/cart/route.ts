@@ -1,20 +1,22 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { sql } from "@/lib/db";
+import { evaluateDiscount, normalizeCode, type DiscountRow } from "@/lib/discounts";
 
 const Body = z.object({
   items: z.array(z.object({ variantId: z.string().uuid(), qty: z.number().int().min(1).max(20) })).max(50),
+  code: z.string().max(40).optional(),
 });
 
 type Row = { id: string; size: string | null; color_ar: string | null; stock: number;
   slug: string; name_ar: string; price_minor: string; sale_price_minor: string | null };
 
-// Prices and stock come ONLY from the database. The browser sends ids and quantities.
+// Prices, stock and discounts come ONLY from the database. The browser sends ids, quantities and a code.
 export async function POST(req: Request) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "invalid" }, { status: 400 });
-  const items = parsed.data.items;
-  if (items.length === 0) return NextResponse.json({ lines: [], subtotalMinor: 0 });
+  const { items, code } = parsed.data;
+  if (items.length === 0) return NextResponse.json({ lines: [], subtotalMinor: 0, discountMinor: 0 });
 
   const want = new Map<string, number>();
   for (const i of items) want.set(i.variantId, (want.get(i.variantId) ?? 0) + i.qty);
@@ -40,5 +42,18 @@ export async function POST(req: Request) {
     return { variantId: id, slug: r.slug, name: r.name_ar, size: r.size, color: r.color_ar,
       unitMinor, qty, requested, lineMinor, available: qty > 0 };
   });
-  return NextResponse.json({ lines, subtotalMinor });
+
+  let discountMinor = 0;
+  let discountCode: string | null = null;
+  let discountError: string | null = null;
+  const c = code ? normalizeCode(code) : "";
+  if (c) {
+    const [d] = await sql<DiscountRow[]>`
+      select id, code, kind, value, min_order_minor, max_uses, used_count, starts_at, ends_at, is_active
+      from discounts where code = ${c}`;
+    const res = evaluateDiscount(d, subtotalMinor);
+    if (res.ok) { discountMinor = res.amountMinor; discountCode = res.code; }
+    else discountError = res.error;
+  }
+  return NextResponse.json({ lines, subtotalMinor, discountMinor, discountCode, discountError });
 }
