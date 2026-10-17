@@ -23,6 +23,7 @@ export default async function EditProduct({ params, searchParams }: {
   return (
     <form action={updateProduct} className="max-w-2xl space-y-4">
       <input type="hidden" name="id" value={p.id} />
+      <a href={"/admin/products/" + p.id + "/organize"} className="text-sm underline">Categories &amp; variants →</a>
       <h1 className="text-2xl font-semibold">Edit product <span className="text-base text-neutral-500">({p.sku})</span></h1>
       {q.saved && <p className="bg-green-100 text-green-900 p-2 rounded text-sm">Saved.</p>}
       {q.error && <p className="bg-red-100 text-red-900 p-2 rounded text-sm">

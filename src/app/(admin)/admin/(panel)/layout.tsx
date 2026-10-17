@@ -13,6 +13,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <nav className="mt-4 flex md:flex-col gap-4 text-sm">
           <Link href="/admin">Dashboard</Link>
           <Link href="/admin/products">Products</Link>
+          <Link href="/admin/categories">Categories</Link>
           <Link href="/admin/change-password">Change password</Link>
         </nav>
         <p className="mt-6 text-xs opacity-60 break-all">{admin.email} ({admin.role})</p>

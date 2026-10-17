@@ -10,7 +10,7 @@ export default async function Products() {
     group by p.id order by p.created_at desc`;
   return (
     <>
-      <h1 className="text-2xl font-semibold mb-6">Products</h1>
+      <div className="flex items-center justify-between mb-6"><h1 className="text-2xl font-semibold">Products</h1><Link href="/admin/products/new" className="bg-neutral-900 text-white px-4 py-2 rounded text-sm">New product</Link></div>
       <div className="bg-white rounded shadow overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-neutral-500">
