@@ -17,5 +17,9 @@ function client(): Sql {
 
 export const sql = new Proxy(function () {} as unknown as Sql, {
   apply: (_t, _this, args) => (client() as unknown as (...a: unknown[]) => unknown)(...args),
-  get: (_t, prop) => (client() as unknown as Record<string | symbol, unknown>)[prop],
+  get: (_t, prop) => {
+    const c = client() as unknown as Record<string | symbol, unknown>;
+    const v = c[prop];
+    return typeof v === "function" ? (v as (...a: unknown[]) => unknown).bind(c) : v;
+  },
 }) as Sql;
