@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+html { scroll-behavior: smooth; }
+:focus-visible { outline: 2px solid #a8864a; outline-offset: 2px; }
+.skip { position: absolute; inset-inline-start: -9999px; top: 0; background: #0c0a09; color: #c9a96e; padding: .75rem 1rem; z-index: 100; }
+.skip:focus { inset-inline-start: 0; }
+.pearl-orb {
+  background: radial-gradient(circle at 32% 28%, #ffffff 0%, #f6efe0 28%, #e2d2b0 62%, #b79a62 100%);
+  box-shadow: 0 30px 80px -20px rgba(201,169,110,.55), inset -14px -18px 40px rgba(120,90,40,.25);
+}
+@keyframes drift { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-14px); } }
+.drift { animation: drift 9s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
