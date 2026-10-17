@@ -24,3 +24,5 @@ export function setQty(variantId: string, qty: number) {
   if (qty > 0) items.push({ variantId, qty: Math.min(qty, 20) });
   write(items);
 }
+
+export function clearCart() { write([]); }

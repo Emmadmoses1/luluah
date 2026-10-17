@@ -14,6 +14,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           <Link href="/admin">Dashboard</Link>
           <Link href="/admin/products">Products</Link>
           <Link href="/admin/categories">Categories</Link>
+          <Link href="/admin/orders">Orders</Link>
+          <Link href="/admin/shipping">Shipping</Link>
           <Link href="/admin/change-password">Change password</Link>
         </nav>
         <p className="mt-6 text-xs opacity-60 break-all">{admin.email} ({admin.role})</p>

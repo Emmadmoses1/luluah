@@ -69,7 +69,7 @@ export default function CartPage() {
         <span>المجموع الفرعي</span><span>{formatBHD(subtotal)}</span>
       </div>
       <p className="mt-2 text-sm opacity-60">تُحتسب تكلفة الشحن وخيارات التوصيل عند إتمام الطلب.</p>
-      <button disabled className="mt-6 w-full bg-ink text-gold py-3 font-bold opacity-40">إتمام الطلب (قريباً)</button>
+      <Link href="/checkout" className="mt-6 block text-center w-full bg-ink text-gold py-3 font-bold">إتمام الطلب</Link>
     </main>
   );
 }

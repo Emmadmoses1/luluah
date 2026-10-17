@@ -21,6 +21,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
             <Link href="/" className="text-3xl font-bold text-gold">لؤلؤة</Link>
             <nav className="flex gap-6 text-sm">
               <Link href="/">الرئيسية</Link>
+              <Link href="/track">تتبّع الطلب</Link>
               <CartLink />
             </nav>
           </div>
