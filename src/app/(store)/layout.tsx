@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Cairo } from "next/font/google";
 import "../globals.css";
+import CartLink from "@/components/CartLink";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"], display: "swap" });
 
@@ -20,6 +21,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
             <Link href="/" className="text-3xl font-bold text-gold">لؤلؤة</Link>
             <nav className="flex gap-6 text-sm">
               <Link href="/">الرئيسية</Link>
+              <CartLink />
             </nav>
           </div>
         </header>

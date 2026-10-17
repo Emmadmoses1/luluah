@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { sql } from "@/lib/db";
 import { formatBHD } from "@/lib/money";
+import AddToCart, { type VariantOpt } from "@/components/AddToCart";
 
 export const dynamic = "force-dynamic";
 
@@ -11,8 +12,8 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
     select id, name_ar, description_ar, sku, price_minor, sale_price_minor
     from products where slug = ${slug} and status = 'published'`;
   if (!p) notFound();
-  const variants = await sql<{ size: string | null; color_ar: string | null; stock: number }[]>`
-    select size, color_ar, stock from product_variants where product_id = ${p.id} order by sku`;
+  const variants = await sql<VariantOpt[]>`
+    select id, size, color_ar, stock from product_variants where product_id = ${p.id} order by sku`;
   const inStock = variants.some((v) => v.stock > 0);
 
   return (
@@ -34,13 +35,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
           {inStock ? "متوفر" : "نفد المخزون"}
         </p>
         <p className="mt-6 leading-8">{p.description_ar}</p>
-        <div className="mt-6 flex flex-wrap gap-2">
-          {variants.map((v, i) => (
-            <span key={i} className={`border px-3 py-1 text-sm ${v.stock > 0 ? "border-ink" : "border-beige opacity-40 line-through"}`}>
-              {[v.size, v.color_ar].filter(Boolean).join(" · ")}
-            </span>
-          ))}
-        </div>
+        <AddToCart variants={variants} />
         <p className="mt-6 text-xs opacity-60">رمز المنتج: {p.sku}</p>
       </div>
     </main>
