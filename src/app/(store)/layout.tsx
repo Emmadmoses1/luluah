@@ -30,6 +30,7 @@ export default function StoreLayout({ children }: { children: React.ReactNode })
           <p className="text-gold text-xl font-bold mb-2">لؤلؤة</p>
           <p>الفخامة التي تليق بك</p>
           <p className="mt-4 opacity-60">المنتجات المعروضة حالياً تجريبية ولا تمثّل مخزوناً حقيقياً.</p>
+          <p className="mt-2 opacity-60">الصور مقدّمة من <a href="https://pixabay.com" target="_blank" rel="noopener noreferrer" className="underline">Pixabay</a></p>
         </footer>
       </body>
     </html>

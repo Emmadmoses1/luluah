@@ -7,8 +7,10 @@ export default async function Home() {
   const cats = await sql<{ slug: string; name_ar: string }[]>`
     select slug, name_ar from categories where is_active order by sort_order`;
   const products = await sql<CardProduct[]>`
-    select slug, name_ar, price_minor, sale_price_minor from products
-    where status = 'published' order by created_at desc limit 8`;
+    select p.slug, p.name_ar, p.price_minor, p.sale_price_minor,
+      (select coalesce(i.thumb_path, i.path) from product_images i where i.product_id = p.id order by i.sort_order, i.id limit 1) as image
+    from products p
+    where p.status = 'published' order by p.created_at desc limit 8`;
 
   return (
     <main>
