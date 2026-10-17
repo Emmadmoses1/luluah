@@ -13,23 +13,24 @@ export default function SiteFooter({ s }: { s: StoreSettings }) {
   const hasContact = s.contact_email || s.contact_phone || wa || s.address_ar;
   const link = "hover:text-gold transition-colors";
   return (
-    <footer className="mt-24 bg-ink text-pearl">
-      <div className="max-w-6xl mx-auto px-4 py-14 grid gap-10 md:grid-cols-4">
-        <div className="md:col-span-1">
-          <Logo light />
-          <p className="mt-4 text-sm leading-7 opacity-70">الفخامة التي تليق بك. وجهة للأزياء والعطور والإكسسوارات بروح خليجية أنيقة.</p>
+    <footer className="mt-28 bg-ink text-pearl relative overflow-hidden">
+      <div className="h-px bg-gradient-to-r from-transparent via-gold to-transparent" />
+      <div className="max-w-7xl mx-auto px-5 pt-16 pb-12 grid gap-12 md:grid-cols-4">
+        <div>
+          <Logo light size={44} />
+          <p className="mt-5 text-sm leading-8 opacity-70">الفخامة التي تليق بك. وجهة للأزياء والعطور والإكسسوارات بروح خليجية أنيقة.</p>
         </div>
         <div>
-          <h3 className="font-bold text-gold mb-3">تسوّق</h3>
-          <ul className="space-y-2 text-sm">
+          <h3 className="font-display text-xl font-bold text-gold mb-4">تسوّق</h3>
+          <ul className="space-y-3 text-sm">
             <li><Link className={link} href="/shop">كل المنتجات</Link></li>
             <li><Link className={link} href="/track">تتبّع الطلب</Link></li>
             <li><Link className={link} href="/cart">سلة التسوق</Link></li>
           </ul>
         </div>
         <div>
-          <h3 className="font-bold text-gold mb-3">معلومات</h3>
-          <ul className="space-y-2 text-sm">
+          <h3 className="font-display text-xl font-bold text-gold mb-4">معلومات</h3>
+          <ul className="space-y-3 text-sm">
             <li><Link className={link} href="/about">من نحن</Link></li>
             <li><Link className={link} href="/faq">الأسئلة الشائعة</Link></li>
             <li><Link className={link} href="/shipping-policy">سياسة الشحن</Link></li>
@@ -39,9 +40,9 @@ export default function SiteFooter({ s }: { s: StoreSettings }) {
           </ul>
         </div>
         <div>
-          <h3 className="font-bold text-gold mb-3">تواصل معنا</h3>
+          <h3 className="font-display text-xl font-bold text-gold mb-4">تواصل معنا</h3>
           {hasContact ? (
-            <ul className="space-y-2 text-sm">
+            <ul className="space-y-3 text-sm">
               {s.contact_phone && <li dir="ltr" className="text-right">{s.contact_phone}</li>}
               {wa && <li><a className={link} href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">واتساب</a></li>}
               {s.contact_email && <li dir="ltr" className="text-right break-all">{s.contact_email}</li>}
@@ -51,16 +52,16 @@ export default function SiteFooter({ s }: { s: StoreSettings }) {
             <p className="text-sm opacity-60">ستُضاف معلومات التواصل قريباً.</p>
           )}
           {social.length > 0 && (
-            <ul className="mt-4 flex flex-wrap gap-4 text-sm">
+            <ul className="mt-5 flex flex-wrap gap-2 text-xs">
               {social.map((x) => (
-                <li key={x.label}><a className={link} href={x.url!} target="_blank" rel="noopener noreferrer">{x.label}</a></li>
+                <li key={x.label}><a className="inline-block border border-gold/40 rounded-full px-3.5 py-1.5 hover:bg-gold hover:text-ink transition-colors" href={x.url!} target="_blank" rel="noopener noreferrer">{x.label}</a></li>
               ))}
             </ul>
           )}
         </div>
       </div>
       <div className="border-t border-white/10">
-        <div className="max-w-6xl mx-auto px-4 py-8 flex flex-wrap items-center justify-between gap-6">
+        <div className="max-w-7xl mx-auto px-5 py-8 flex flex-wrap items-center justify-between gap-6">
           <Newsletter />
           <div className="text-xs opacity-60 space-y-1 leading-6">
             {s.show_demo_notice && <p>المنتجات المعروضة حالياً تجريبية ولا تمثّل مخزوناً حقيقياً.</p>}

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
-import { Cairo } from "next/font/google";
+import { Cairo, Amiri } from "next/font/google";
 import "../globals.css";
 import { sql } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
@@ -13,7 +13,8 @@ import CurrencySelect from "@/components/CurrencySelect";
 import SiteFooter from "@/components/SiteFooter";
 import CookieNotice from "@/components/CookieNotice";
 
-const cairo = Cairo({ subsets: ["arabic", "latin"], display: "swap", weight: ["400", "600", "700"] });
+const cairo = Cairo({ subsets: ["arabic", "latin"], display: "swap", weight: ["300", "400", "600", "700", "800"], variable: "--font-body" });
+const amiri = Amiri({ subsets: ["arabic", "latin"], display: "swap", weight: ["400", "700"], variable: "--font-display" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL || "http://localhost:3000"),
@@ -34,27 +35,25 @@ export default async function StoreLayout({ children }: { children: React.ReactN
   const [{ store }, cats, curs, cur] = await Promise.all([getSettings(), categories(), activeCurrencies(), getDisplayCurrency()]);
   return (
     <html lang="ar" dir="rtl">
-      <body className={`${cairo.className} bg-ivory text-ink antialiased`}>
+      <body className={`${cairo.variable} ${amiri.variable} font-[family-name:var(--font-body)] bg-ivory text-ink antialiased`}>
         <a href="#main" className="skip">انتقل إلى المحتوى</a>
-        <div className="bg-ink text-gold text-center text-sm py-2 px-4">{store.announcement_ar || "مرحباً بكم في لؤلؤة"}</div>
-        <header className="border-b border-beige bg-ivory/95 backdrop-blur sticky top-0 z-40">
-          <div className="max-w-6xl mx-auto px-4 h-16 flex items-center gap-4">
+        <div className="bg-ink text-gold text-center text-[13px] py-2 px-4 tracking-wide">{store.announcement_ar || "مرحباً بكم في لؤلؤة"}</div>
+        <header className="sticky top-0 z-40 bg-ivory/85 backdrop-blur-xl border-b border-beige/70">
+          <div className="max-w-7xl mx-auto px-4 h-[68px] flex items-center gap-4">
             <MobileMenu cats={cats} />
-            <Link href="/" aria-label="لؤلؤة - الصفحة الرئيسية"><Logo /></Link>
-            <div className="hidden md:block flex-1 max-w-xl mx-auto"><SearchBox /></div>
-            <div className="flex items-center gap-4 ms-auto text-sm">
-              <Link href="/track" className="hidden md:inline">تتبّع الطلب</Link>
+            <Link href="/" aria-label="لؤلؤة - الصفحة الرئيسية" className="shrink-0"><Logo size={38} /></Link>
+            <nav aria-label="الفئات" className="hidden lg:flex items-center gap-6 text-sm ms-6">
+              <Link className="u-link font-bold" href="/shop">كل المنتجات</Link>
+              {cats.slice(0, 5).map((c) => <Link key={c.slug} className="u-link hover:text-goldDeep transition-colors" href={`/category/${c.slug}`}>{c.name_ar}</Link>)}
+            </nav>
+            <div className="hidden md:block flex-1 max-w-md ms-auto"><SearchBox /></div>
+            <div className="flex items-center gap-1 ms-auto md:ms-0 text-sm">
+              <Link href="/track" className="hidden xl:inline u-link px-2">تتبّع الطلب</Link>
               <CurrencySelect codes={curs.map((c) => c.code)} current={cur.code} />
               <CartLink />
             </div>
           </div>
           <div className="md:hidden px-4 pb-3"><SearchBox /></div>
-          <nav aria-label="الفئات" className="hidden md:block border-t border-beige">
-            <ul className="max-w-6xl mx-auto px-4 h-11 flex items-center gap-6 text-sm overflow-x-auto whitespace-nowrap">
-              <li><Link className="font-semibold" href="/shop">كل المنتجات</Link></li>
-              {cats.slice(0, 9).map((c) => <li key={c.slug}><Link className="hover:text-goldDeep" href={`/category/${c.slug}`}>{c.name_ar}</Link></li>)}
-            </ul>
-          </nav>
         </header>
         <div id="main">{children}</div>
         <SiteFooter s={store} />
