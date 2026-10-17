@@ -10,7 +10,9 @@
     "db:migrate": "node --env-file=.env scripts/migrate.mjs",
     "db:seed": "node --env-file=.env scripts/seed.mjs",
     "images:download": "node --env-file=.env scripts/images-download.mjs",
-    "images:check": "node --env-file=.env scripts/images-check.mjs"
+    "images:check": "node --env-file=.env scripts/images-check.mjs",
+    "orders:expire": "node --env-file=.env scripts/expire-orders.mjs",
+    "test": "node --test tests/logic.test.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
