@@ -35,3 +35,30 @@ test("exchange rates", () => {
   assert.equal(parseRate("1.123456789"), null);
   assert.equal(parseRate("abc"), null);
 });
+
+import { parseDelta, parseAdminUser } from "../src/lib/admin-forms.ts";
+import { sniffImage } from "../src/lib/image-sniff.ts";
+
+test("stock deltas", () => {
+  assert.equal(parseDelta("+5"), 5);
+  assert.equal(parseDelta("-2"), -2);
+  assert.equal(parseDelta("0"), null);
+  assert.equal(parseDelta("1.5"), null);
+  assert.equal(parseDelta("abc"), null);
+  assert.equal(parseDelta("1000000"), null);
+});
+test("admin user form", () => {
+  const ok = parseAdminUser({ email: " Staff@Example.com ", role: "staff", password: "a-long-password-1" });
+  assert.deepEqual(ok, { ok: true, email: "staff@example.com", role: "staff", password: "a-long-password-1" });
+  assert.equal(parseAdminUser({ email: "nope", role: "staff", password: "a-long-password-1" }).error, "email");
+  assert.equal(parseAdminUser({ email: "a@b.co", role: "root", password: "a-long-password-1" }).error, "role");
+  assert.equal(parseAdminUser({ email: "a@b.co", role: "staff", password: "short" }).error, "password");
+});
+test("image sniffing uses magic bytes, not names", () => {
+  assert.equal(sniffImage(new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0])), "image/jpeg");
+  assert.equal(sniffImage(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0])), "image/png");
+  const webp = new Uint8Array([...Buffer.from("RIFF"), 0, 0, 0, 0, ...Buffer.from("WEBP")]);
+  assert.equal(sniffImage(webp), "image/webp");
+  assert.equal(sniffImage(new TextEncoder().encode("<svg onload=alert(1)>")), null);
+  assert.equal(sniffImage(new Uint8Array([])), null);
+});

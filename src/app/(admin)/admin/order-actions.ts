@@ -4,6 +4,8 @@ import { z } from "zod";
 import { sql } from "@/lib/db";
 import { audit, requireAdmin } from "@/lib/auth";
 import { parseBhd } from "@/lib/money";
+import { sendEmail } from "@/lib/email";
+import { orderShippedEmail } from "@/lib/email-templates";
 
 const MANAGERS: ("owner" | "manager")[] = ["owner", "manager"];
 
@@ -43,10 +45,19 @@ export async function updateOrder(fd: FormData) {
   const status = z.enum(["new", "processing", "shipped", "delivered"]).parse(fd.get("fulfillment_status"));
   const tracking = String(fd.get("tracking_ref") ?? "").trim().slice(0, 100) || null;
   const notes = String(fd.get("admin_notes") ?? "").trim().slice(0, 2000) || null;
+  const [prev] = await sql<{ fulfillment_status: string }[]>`select fulfillment_status from orders where id = ${id}`;
   const res = await sql`update orders set fulfillment_status = ${status}, tracking_ref = ${tracking},
     admin_notes = ${notes}, updated_at = now() where id = ${id} and fulfillment_status <> 'cancelled' returning id`;
   if (res.length === 0) redirect(`/admin/orders/${id}?error=cancelled`);
   await audit(admin.id, "order.update", { id, status, tracking });
+  if (status === "shipped" && prev?.fulfillment_status !== "shipped") {
+    const [c] = await sql<{ ref: string; customer_name: string; customer_email: string | null; tracking_ref: string | null }[]>`
+      select ref, customer_name, customer_email, tracking_ref from orders where id = ${id}`;
+    if (c?.customer_email) {
+      const m = orderShippedEmail({ name: c.customer_name, ref: c.ref, tracking: c.tracking_ref, siteUrl: (process.env.SITE_URL ?? "").replace(/\/+$/, "") });
+      await sendEmail(c.customer_email, m.subject, m.html);
+    }
+  }
   redirect(`/admin/orders/${id}?saved=1`);
 }
 

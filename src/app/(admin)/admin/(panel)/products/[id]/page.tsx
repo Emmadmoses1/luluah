@@ -29,7 +29,10 @@ export default async function EditProduct({ params, searchParams }: {
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-3xl font-semibold">Edit product <span className="text-base text-neutral-400 font-mono">{p.sku}</span>
             {p.is_demo && <span className="ml-2 text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded align-middle">DEMO</span>}</h1>
-          <Link href={`/admin/products/${p.id}/organize`} className="a-btn-ghost">Categories &amp; variants →</Link>
+          <span className="flex gap-2">
+            <Link href={`/admin/products/${p.id}/images`} className="a-btn-ghost">Images →</Link>
+            <Link href={`/admin/products/${p.id}/organize`} className="a-btn-ghost">Categories &amp; variants →</Link>
+          </span>
         </div>
       </div>
       {q.saved && <p role="status" className="rounded-xl bg-emerald-100 text-emerald-900 px-4 py-3 text-sm">Saved.</p>}

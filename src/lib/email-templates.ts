@@ -25,3 +25,12 @@ export function paymentConfirmedEmail(o: { name: string; ref: string; siteUrl: s
 export function adminNewOrderEmail(o: { ref: string; total: string; country: string }) {
   return { subject: `New order ${showRef(o.ref)}`, html: `<p>New order <b>${showRef(o.ref)}</b> from ${esc(o.country)}. Total: ${esc(o.total)}.</p>` };
 }
+
+export function orderShippedEmail(o: { name: string; ref: string; tracking: string | null; siteUrl: string }) {
+  const track = o.tracking ? `<p>رقم التتبع: <b dir="ltr">${esc(o.tracking)}</b></p>` : "";
+  return {
+    subject: `تم شحن طلبك ${showRef(o.ref)}`,
+    html: shell("تم شحن طلبك", `<p>مرحباً ${esc(o.name)}،</p><p>تم شحن طلبك <b dir="ltr">${showRef(o.ref)}</b>.</p>${track}
+<p><a href="${esc(o.siteUrl)}/order/${esc(o.ref)}">متابعة حالة الطلب</a></p>`),
+  };
+}

@@ -66,3 +66,22 @@ export function parseRate(s: string): string | null {
   if (!/^\d{1,6}(\.\d{1,8})?$/.test(t)) return null;
   return Number(t) > 0 ? t : null;
 }
+
+/** Stock adjustment: a non-zero whole number, e.g. "+5", "-2", "10". */
+export function parseDelta(s: string): number | null {
+  const t = s.trim().replace(/^\+/, "");
+  if (!/^-?\d{1,6}$/.test(t)) return null;
+  const n = Number(t);
+  return n === 0 ? null : n;
+}
+
+/** New admin account: validated email, role and a temporary password of at least 12 characters. */
+export function parseAdminUser(f: { email?: string; role?: string; password?: string }):
+  { ok: true; email: string; role: "owner" | "manager" | "staff"; password: string } | { ok: false; error: string } {
+  const email = (f.email ?? "").trim().toLowerCase();
+  if (email.length > 120 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, error: "email" };
+  if (f.role !== "owner" && f.role !== "manager" && f.role !== "staff") return { ok: false, error: "role" };
+  const password = f.password ?? "";
+  if (password.length < 12 || password.length > 200) return { ok: false, error: "password" };
+  return { ok: true, email, role: f.role, password };
+}
