@@ -27,16 +27,16 @@ export default function RecentlyViewed({ currentSlug }: { currentSlug?: string }
   }, [currentSlug]);
   if (items.length === 0) return null;
   return (
-    <section className="max-w-6xl mx-auto px-4 mt-16">
-      <h2 className="text-xl font-bold mb-5">شاهدتها مؤخراً</h2>
-      <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
+    <section className="max-w-7xl mx-auto px-4 mt-20">
+      <h2 className="font-display text-3xl font-bold mb-6">شاهدتها مؤخراً</h2>
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-5">
         {items.map((p) => (
-          <Link key={p.slug} href={`/product/${p.slug}`} className="block text-xs">
-            <div className="aspect-[3/4] bg-beige overflow-hidden">
+          <Link key={p.slug} href={`/product/${p.slug}`} className="group block text-xs">
+            <div className="card-img aspect-[3/4] rounded-xl">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               {p.image && <img src={p.image} alt={p.name_ar} loading="lazy" className="w-full h-full object-cover" />}
             </div>
-            <p className="mt-2 font-semibold leading-5">{p.name_ar}</p>
+            <p className="mt-2 font-semibold leading-5 line-clamp-2 group-hover:text-goldDeep transition-colors">{p.name_ar}</p>
             <p className="opacity-70">{formatMoney(p.sale_price_minor ?? p.price_minor)}</p>
           </Link>
         ))}
