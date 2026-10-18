@@ -5,3 +5,5 @@ node_modules
 *.log
 *.tsbuildinfo
 data/geonames/
+data/geonames/
+data/osm/

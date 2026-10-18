@@ -13,7 +13,7 @@ fetch_zip() { # url, expected txt name
 }
 fetch_zip "$BASE/dump/cities1000.zip" cities1000.txt
 curl -fsSL --retry 3 -o "$DIR/admin1CodesASCII.txt" "$BASE/dump/admin1CodesASCII.txt" && echo "ok      admin1CodesASCII.txt" || echo "missing admin1CodesASCII.txt"
-for c in BH SA AE KW QA OM YE IQ JO PS LB SY EG SD LY TN DZ MA MR SO DJ KM; do
+for c in BH SA KW QA OM YE IQ JO PS LB SY EG SD LY TN DZ MA MR SO DJ KM; do
   fetch_zip "$BASE/zip/$c.zip" "$c.txt"
 done
 echo "Done. Next: npm run places:import"

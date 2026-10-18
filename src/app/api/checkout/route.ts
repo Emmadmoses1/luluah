@@ -7,6 +7,7 @@ import { evaluateDiscount, normalizeCode, type DiscountRow } from "@/lib/discoun
 import { sendEmail } from "@/lib/email";
 import { adminNewOrderEmail, orderReceivedEmail } from "@/lib/email-templates";
 import { formatMoney } from "@/lib/currency";
+import { westernDigits } from "@/lib/arabic";
 
 class Fail extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -52,6 +53,11 @@ export async function POST(req: Request) {
   const need = BH ? ["region", "area", "block", "road", "building"] : ["city", "street"];
   if (need.some((k) => !address[k])) return bad("يرجى تعبئة جميع حقول العنوان المطلوبة.");
   if (BH && !BH_REGIONS.includes(address.region)) return bad("يرجى اختيار المحافظة.");
+  if (address.postal) {
+    address.postal = westernDigits(address.postal).toUpperCase().slice(0, 20);
+    const [pc] = await sql<{ postal_regex: string | null }[]>`select postal_regex from countries where iso2 = ${b.country}`;
+    if (pc?.postal_regex && !new RegExp(pc.postal_regex).test(address.postal)) return bad("الرمز البريدي غير مطابق لصيغة الدولة المختارة.");
+  }
 
   const ip = (req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown").trim();
   const [rl] = await sql<{ n: string }[]>`

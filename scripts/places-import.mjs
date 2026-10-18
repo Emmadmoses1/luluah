@@ -8,7 +8,9 @@ if (!url || url.includes("PASTE_")) { console.error("DATABASE_URL is missing. Ed
 const sql = postgres(url, { max: 1, onnotice: () => {} });
 const DIR = "data/geonames";
 
-const isos = (await sql`select iso2 from countries`).map((r) => r.iso2);
+const countryRows = await sql`select iso2, postal_regex from countries`;
+const isos = countryRows.map((r) => r.iso2);
+const regexes = new Map(countryRows.filter((r) => r.postal_regex).map((r) => [r.iso2, new RegExp(r.postal_regex)]));
 if (isos.length === 0) { console.error("No countries in the database. Run: npm run db:seed"); process.exit(1); }
 const allowed = new Set(isos);
 
@@ -45,9 +47,12 @@ for (const iso of isos) {
   const f = `${DIR}/${iso}.txt`;
   if (!existsSync(f)) { missing.push(iso); continue; }
   const seen = new Set(), rows = [];
+  let rejected = 0;
   for await (const l of lines(f)) {
     const r = parsePostalLine(l, allowed);
     if (!r) continue;
+    const re = regexes.get(iso);
+    if (re && !re.test(r.code)) { rejected++; continue; }
     const key = `${r.country_iso2}|${r.code}|${r.place_name}`;
     if (seen.has(key)) continue;
     seen.add(key); rows.push(r);
@@ -56,7 +61,7 @@ for (const iso of isos) {
     insert into postal_codes ${sql(c, "country_iso2", "code", "place_name", "admin_name")}
     on conflict (country_iso2, code, place_name) do nothing`);
   totalPostal += rows.length;
-  console.log(`postal ${iso}: ${rows.length} rows`);
+  console.log(`postal ${iso}: ${rows.length} rows` + (rejected ? ` (${rejected} rejected: wrong format)` : ""));
 }
 console.log(`postal codes total: ${totalPostal}`);
 if (missing.length) console.log(`No postal file for: ${missing.join(", ")} (the source may not publish codes for these countries).`);

@@ -66,7 +66,7 @@ export default function SiteFooter({ s }: { s: StoreSettings }) {
           <div className="text-xs opacity-60 space-y-1 leading-6">
             {s.show_demo_notice && <p>المنتجات المعروضة حالياً تجريبية ولا تمثّل مخزوناً حقيقياً.</p>}
             <p>الصور مقدّمة من <a href="https://pixabay.com" target="_blank" rel="noopener noreferrer" className="underline">Pixabay</a></p>
-            <p>بيانات المدن والرموز البريدية من <a href="https://www.geonames.org" target="_blank" rel="noopener noreferrer" className="underline">GeoNames</a></p>
+            <p>بيانات المدن والرموز البريدية من <a href="https://www.geonames.org" target="_blank" rel="noopener noreferrer" className="underline">GeoNames</a> و© مساهمي <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer" className="underline">OpenStreetMap</a></p>
             <p>© لؤلؤة. جميع الحقوق محفوظة.</p>
           </div>
         </div>
