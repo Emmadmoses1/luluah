@@ -12,6 +12,8 @@ import MobileMenu from "@/components/MobileMenu";
 import CurrencySelect from "@/components/CurrencySelect";
 import SiteFooter from "@/components/SiteFooter";
 import CookieNotice from "@/components/CookieNotice";
+import StickyHeader from "@/components/StickyHeader";
+import FloatingActions from "@/components/FloatingActions";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"], display: "swap", weight: ["300", "400", "600", "700", "800"], variable: "--font-body" });
 const amiri = Amiri({ subsets: ["arabic", "latin"], display: "swap", weight: ["400", "700"], variable: "--font-display" });
@@ -37,12 +39,12 @@ export default async function StoreLayout({ children }: { children: React.ReactN
     <html lang="ar" dir="rtl">
       <body className={`${cairo.variable} ${amiri.variable} font-[family-name:var(--font-body)] bg-ivory text-ink antialiased`}>
         <a href="#main" className="skip">انتقل إلى المحتوى</a>
-        <div className="bg-ink text-gold text-center text-[13px] py-2 px-4 tracking-wide">{store.announcement_ar || "مرحباً بكم في لؤلؤة"}</div>
-        <header className="sticky top-0 z-40 bg-ivory/85 backdrop-blur-xl border-b border-beige/70">
-          <div className="max-w-7xl mx-auto px-4 h-[68px] flex items-center gap-4">
+        <div className="bg-ink text-gold text-center text-[13px] py-2.5 px-4 tracking-wide">{store.announcement_ar || "مرحباً بكم في لؤلؤة"}</div>
+        <StickyHeader>
+          <div className="max-w-7xl mx-auto px-4 h-[72px] flex items-center gap-4">
             <MobileMenu cats={cats} />
-            <Link href="/" aria-label="لؤلؤة - الصفحة الرئيسية" className="shrink-0"><Logo size={38} /></Link>
-            <nav aria-label="الفئات" className="hidden lg:flex items-center gap-6 text-sm ms-6">
+            <Link href="/" aria-label="لؤلؤة - الصفحة الرئيسية" className="shrink-0"><Logo size={40} /></Link>
+            <nav aria-label="الفئات" className="hidden lg:flex items-center gap-7 text-sm ms-8">
               <Link className="u-link font-bold" href="/shop">كل المنتجات</Link>
               {cats.slice(0, 5).map((c) => <Link key={c.slug} className="u-link hover:text-goldDeep transition-colors" href={`/category/${c.slug}`}>{c.name_ar}</Link>)}
             </nav>
@@ -54,9 +56,10 @@ export default async function StoreLayout({ children }: { children: React.ReactN
             </div>
           </div>
           <div className="md:hidden px-4 pb-3"><SearchBox /></div>
-        </header>
+        </StickyHeader>
         <div id="main">{children}</div>
-        <SiteFooter s={store} />
+        <SiteFooter s={store} cats={cats} />
+        <FloatingActions whatsapp={store.whatsapp} />
         <CookieNotice />
       </body>
     </html>

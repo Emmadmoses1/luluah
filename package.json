@@ -12,7 +12,7 @@
     "images:download": "node --env-file=.env scripts/images-download.mjs",
     "images:check": "node --env-file=.env scripts/images-check.mjs",
     "orders:expire": "node --env-file=.env scripts/expire-orders.mjs",
-    "test": "node --test tests/logic.test.mjs tests/geonames.test.mjs tests/postal-csv.test.mjs tests/osm.test.mjs tests/admin-forms.test.mjs",
+    "test": "node --test tests/logic.test.mjs tests/geonames.test.mjs tests/postal-csv.test.mjs tests/osm.test.mjs tests/admin-forms.test.mjs tests/zoom.test.mjs",
     "places:fetch": "sh scripts/places-fetch.sh",
     "places:import": "node --env-file=.env scripts/places-import.mjs",
     "places:import-csv": "node --env-file=.env scripts/places-import-csv.mjs",

@@ -3,27 +3,28 @@ import { useState } from "react";
 
 export default function Newsletter() {
   const [email, setEmail] = useState("");
-  const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [state, setState] = useState<"idle" | "busy" | "ok" | "err">("idle");
+  const [msg, setMsg] = useState("");
+
   async function go(e: React.FormEvent) {
-    e.preventDefault(); setBusy(true); setMsg(null);
+    e.preventDefault();
+    setState("busy"); setMsg("");
     try {
       const r = await fetch("/api/newsletter", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
       const d = await r.json().catch(() => ({}));
-      if (r.ok) { setMsg({ ok: true, t: "شكراً لاشتراكك في نشرتنا." }); setEmail(""); }
-      else setMsg({ ok: false, t: d.error ?? "تعذّر الاشتراك. حاول مرة أخرى." });
-    } catch { setMsg({ ok: false, t: "تعذّر الاتصال بالخادم." }); }
-    setBusy(false);
+      if (r.ok) { setState("ok"); setMsg("شكراً لاشتراكك."); setEmail(""); }
+      else { setState("err"); setMsg(d.error ?? "تعذّر الاشتراك. حاول مرة أخرى."); }
+    } catch { setState("err"); setMsg("تعذّر الاتصال بالخادم."); }
   }
   return (
-    <form onSubmit={go} className="w-full max-w-md">
-      <label className="block text-sm mb-2" htmlFor="nl">اشترك لتصلك أحدث الإصدارات والعروض</label>
-      <div className="flex">
-        <input id="nl" type="email" required dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)}
-          placeholder="البريد الإلكتروني" className="flex-1 min-w-0 px-4 py-2 text-sm text-ink bg-white" />
-        <button disabled={busy} className="bg-gold text-ink px-5 text-sm font-semibold disabled:opacity-50">اشتراك</button>
+    <form onSubmit={go} className="w-full">
+      <div className="flex flex-col sm:flex-row gap-2">
+        <label className="sr-only" htmlFor="nl-email">البريد الإلكتروني</label>
+        <input id="nl-email" type="email" required dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" autoComplete="email"
+          className="flex-1 min-w-0 rounded-full bg-white px-5 py-3 text-ink outline-none focus:ring-4 focus:ring-ink/20 placeholder:text-ink/40" />
+        <button disabled={state === "busy"} className="btn-dark disabled:opacity-60">{state === "busy" ? "جارٍ الإرسال…" : "اشتراك"}</button>
       </div>
-      {msg && <p className={`mt-2 text-xs ${msg.ok ? "text-green-400" : "text-red-300"}`}>{msg.t}</p>}
+      {msg && <p role="status" className={`mt-2 text-sm ${state === "ok" ? "text-ink" : "text-red-900"}`}>{msg}</p>}
     </form>
   );
 }

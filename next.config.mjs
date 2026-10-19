@@ -4,7 +4,7 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   outputFileTracingRoot: path.resolve(import.meta.dirname),
-  experimental: { serverActions: { bodySizeLimit: "5mb" } },
+  experimental: { serverActions: { bodySizeLimit: "30mb" } },
   async headers() {
     return [{
       source: "/:path*",

@@ -170,3 +170,46 @@ export async function removeSubscriber(fd: FormData) {
   await audit(admin.id, "newsletter.remove", { id });
   redirect("/admin/newsletter?saved=1");
 }
+
+// ---- Multiple image upload & 360° flag ------------------------------------
+const MAX_IMAGES_TOTAL = 36;
+
+export async function uploadProductImages(fd: FormData) {
+  const admin = await requireAdmin(MANAGERS);
+  const id = uuid.parse(fd.get("id"));
+  const back = (q: string): never => redirect(`/admin/products/${id}/images?${q}`);
+  const files = fd.getAll("file").filter((f): f is File => f instanceof File && f.size > 0);
+  if (files.length === 0) return back("error=file");
+  const [p] = await sql<{ name_ar: string }[]>`select name_ar from products where id = ${id}`;
+  if (!p) return back("error=missing");
+  const [c] = await sql<{ n: string; c: string }[]>`
+    select coalesce(max(sort_order), -1) + 1 as n, count(*) as c from product_images where product_id = ${id}`;
+  const room = MAX_IMAGES_TOTAL - Number(c.c);
+  if (room <= 0) return back("error=limit");
+  const alt = str(fd, "alt").trim().slice(0, 200) || p.name_ar;
+  let ok = 0, skipped = 0;
+  await sql.begin(async (tx) => {
+    let next = Number(c.n);
+    for (const file of files) {
+      if (ok >= room || file.size > MAX_IMAGE) { skipped++; continue; }
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const mime = sniffImage(bytes);
+      if (!mime) { skipped++; continue; }
+      const [m] = await tx<{ id: string }[]>`insert into media (mime, size, data) values (${mime}, ${bytes.length}, ${Buffer.from(bytes)}) returning id`;
+      await tx`insert into product_images (product_id, path, alt_ar, sort_order, source_name, license_note)
+        values (${id}, ${"/media/" + m.id}, ${alt}, ${next++}, 'Uploaded by store admin', 'Own image')`;
+      ok++;
+    }
+  });
+  await audit(admin.id, "product.image.upload", { id, added: ok, skipped });
+  return back(`saved=1&added=${ok}&skipped=${skipped}`);
+}
+
+export async function setSpin360(fd: FormData) {
+  const admin = await requireAdmin(MANAGERS);
+  const id = uuid.parse(fd.get("id"));
+  const on = fd.get("spin") === "on";
+  await sql`update products set spin_360 = ${on} where id = ${id}`;
+  await audit(admin.id, "product.spin360", { id, on });
+  redirect(`/admin/products/${id}/images?saved=1`);
+}

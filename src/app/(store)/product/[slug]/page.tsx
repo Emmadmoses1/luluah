@@ -16,10 +16,10 @@ import Reveal from "@/components/Reveal";
 
 export const dynamic = "force-dynamic";
 
-type Prod = { id: string; name_ar: string; description_ar: string; sku: string; price_minor: string; sale_price_minor: string | null };
+type Prod = { id: string; name_ar: string; description_ar: string; sku: string; price_minor: string; sale_price_minor: string | null; spin_360: boolean };
 const getProduct = cache(async (slug: string) => {
   const [p] = await sql<Prod[]>`
-    select id, name_ar, description_ar, sku, price_minor, sale_price_minor
+    select id, name_ar, description_ar, sku, price_minor, sale_price_minor, spin_360
     from products where slug = ${slug} and status = 'published'`;
   return p;
 });
@@ -93,7 +93,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
       <div className="mt-6 grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
         <div className="lg:sticky lg:top-28">
-          <Gallery images={images.map((i) => ({ path: i.path, alt: i.alt_ar }))} name={p.name_ar} />
+          <Gallery images={images.map((i) => ({ path: i.path, alt: i.alt_ar }))} name={p.name_ar} spin={p.spin_360} />
           {images[0]?.photographer && (
             <p className="mt-3 text-xs opacity-50">
               صورة: {images[0].photographer}{" "}
