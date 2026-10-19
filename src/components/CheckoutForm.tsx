@@ -5,7 +5,9 @@ import Link from "next/link";
 import { clearCart, readCart } from "@/lib/cart";
 import { formatBHD } from "@/lib/money";
 import { BH_REGIONS, shippingFor } from "@/lib/shipping";
+import { bahrainRegion } from "@/lib/places-util";
 import PlaceInput from "./PlaceInput";
+import LocationPicker, { type PickedPlace } from "./LocationPicker";
 
 export type CountryOpt = {
   iso2: string; name_ar: string; dial_code: string; fee_minor: number; free_over_minor: number | null;
@@ -33,8 +35,11 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
   const [applied, setApplied] = useState<{ code: string; amountMinor: number } | null>(null);
   const [codeMsg, setCodeMsg] = useState("");
   const [hits, setHits] = useState<Hit[]>([]);
+  const [picked, setPicked] = useState<PickedPlace | null>(null);
+  const [manual, setManual] = useState(false);
   const c = countries.find((x) => x.iso2 === iso)!;
   const bh = iso === "BH";
+  const showAddress = picked !== null || manual;
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
   const put = (k: string) => (v: string) => setF((p) => ({ ...p, [k]: v }));
@@ -79,6 +84,15 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
   const belowMin = subtotal < c.min_order_minor;
   const postalBad = Boolean(postal && c.postal_regex && !new RegExp(c.postal_regex).test(toWestern(postal).toUpperCase()));
 
+  function pick(p: PickedPlace) {
+    if (!countries.some((x) => x.iso2 === p.iso2)) return;
+    setIso(p.iso2); setPicked(p); setManual(false); setHits([]);
+    setF((prev) => p.iso2 === "BH"
+      ? { ...prev, region: bahrainRegion(p.admin) ?? "", area: p.name, city: "", postal: "" }
+      : { ...prev, region: "", city: p.name, area: "", postal: "" });
+  }
+  function clearPlace() { setPicked(null); setManual(false); setHits([]); }
+
   async function applyCode() {
     setCodeMsg("");
     if (!codeInput.trim()) return;
@@ -93,6 +107,7 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!showAddress) { setErr("اختر موقع التوصيل أولاً."); return; }
     if (postalBad) { setErr("الرمز البريدي غير مطابق لصيغة الدولة المختارة."); return; }
     setErr(""); setBusy(true);
     try {
@@ -134,65 +149,79 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
         </section>
 
         <section className={card}>
-          <Step n="٢" t="عنوان التوصيل" />
-          <label className="block text-sm font-semibold">الدولة *
-            <select value={iso} onChange={(e) => { setIso(e.target.value); setHits([]); }} className={input}>
-              {countries.map((x) => <option key={x.iso2} value={x.iso2}>{x.name_ar}</option>)}
-            </select>
-          </label>
-          {bh ? (
-            <>
-              <label className="block text-sm font-semibold">المحافظة *
-                <select value={f.region ?? ""} onChange={set("region")} required className={input}>
-                  <option value="">اختر المحافظة</option>
-                  {BH_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </label>
-              <PlaceInput country={iso} label="المنطقة" required value={f.area ?? ""} onChange={put("area")} className={input} />
-              <div className="grid grid-cols-3 gap-3">
-                {L("المجمّع", "block", { req: true, mode: "numeric" })}
-                {L("الطريق", "road", { req: true, mode: "numeric" })}
-                {L("المبنى", "building", { req: true })}
-              </div>
-              {L("رقم الشقة (إن وجد)", "apartment")}
-            </>
+          <Step n="٢" t="أين نوصّل طلبك؟" />
+          {manual ? (
+            <p className="text-sm">
+              أنت تدخل العنوان يدوياً.{" "}
+              <button type="button" onClick={clearPlace} className="underline font-bold hover:text-goldDeep">العودة للبحث عن موقعك</button>
+            </p>
           ) : (
-            <>
-              {L("المنطقة أو الولاية (اختياري)", "region")}
-              <PlaceInput country={iso} label="المدينة" required value={f.city ?? ""} onChange={put("city")} className={input} />
-              {L("الحي أو المنطقة (اختياري)", "area")}
-              {L("الشارع", "street", { req: true })}
-              <div className="grid grid-cols-2 gap-3">
-                {L("رقم المبنى (اختياري)", "building")}
-                {L("رقم الشقة (اختياري)", "apartment")}
-              </div>
-              <div>
-                <label className="block text-sm font-semibold">
-                  الرمز البريدي (اختياري){c.postal_hint ? ` — ${c.postal_hint}` : ""}
-                  <input value={f.postal ?? ""} onChange={set("postal")} dir="ltr" inputMode="text" autoComplete="postal-code"
-                    aria-invalid={postalBad} className={`${input} ${postalBad ? "!border-red-500" : ""}`} />
-                </label>
-                {postalBad && <p role="alert" className="mt-1 text-xs text-red-700">الرمز لا يطابق صيغة الدولة المختارة{c.postal_hint ? ` (${c.postal_hint})` : ""}.</p>}
-                {hits.length > 0 && (
-                  <ul className="mt-2 flex flex-wrap gap-2" aria-label="أماكن مطابقة للرمز البريدي">
-                    {hits.map((h) => (
-                      <li key={`${h.code}-${h.place_name}`}>
-                        <button type="button" onClick={() => setF((p) => ({ ...p, postal: h.code, city: p.city || h.place_name }))}
-                          className="rounded-full border border-gold/50 bg-pearl px-3 py-1.5 text-xs hover:bg-gold hover:text-ink transition-colors">
-                          <bdi dir="ltr">{h.code}</bdi> · {h.place_name}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </>
+            <LocationPicker picked={picked} onPick={pick} onClear={clearPlace} onManual={() => { setManual(true); setPicked(null); }} />
           )}
-          {L("أقرب معلم (اختياري)", "landmark")}
-          <label className="block text-sm font-semibold">ملاحظات الطلب (اختياري)
-            <textarea value={f.notes ?? ""} onChange={set("notes")} rows={3} maxLength={500} className={input} />
-          </label>
         </section>
+
+        {showAddress && (
+          <section className={`${card} hero-in`}>
+            <Step n="٣" t="تفاصيل العنوان" />
+            <label className="block text-sm font-semibold">الدولة *
+              <select value={iso} onChange={(e) => { setIso(e.target.value); setHits([]); setPicked(null); setF((p) => ({ ...p, region: "", city: "", area: "", postal: "" })); }} className={input}>
+                {countries.map((x) => <option key={x.iso2} value={x.iso2}>{x.name_ar}</option>)}
+              </select>
+            </label>
+            {bh ? (
+              <>
+                <label className="block text-sm font-semibold">المحافظة *
+                  <select value={f.region ?? ""} onChange={set("region")} required className={input}>
+                    <option value="">اختر المحافظة</option>
+                    {BH_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </label>
+                <PlaceInput country={iso} label="المنطقة" required value={f.area ?? ""} onChange={put("area")} className={input} />
+                <div className="grid grid-cols-3 gap-3">
+                  {L("المجمّع", "block", { req: true, mode: "numeric" })}
+                  {L("الطريق", "road", { req: true, mode: "numeric" })}
+                  {L("المبنى", "building", { req: true })}
+                </div>
+                {L("رقم الشقة (إن وجد)", "apartment")}
+              </>
+            ) : (
+              <>
+                {L("المنطقة أو الولاية (اختياري)", "region")}
+                <PlaceInput country={iso} label="المدينة" required value={f.city ?? ""} onChange={put("city")} className={input} />
+                {L("الحي أو المنطقة (اختياري)", "area")}
+                {L("الشارع", "street", { req: true })}
+                <div className="grid grid-cols-2 gap-3">
+                  {L("رقم المبنى (اختياري)", "building")}
+                  {L("رقم الشقة (اختياري)", "apartment")}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold">
+                    الرمز البريدي (اختياري){c.postal_hint ? ` — ${c.postal_hint}` : ""}
+                    <input value={f.postal ?? ""} onChange={set("postal")} dir="ltr" inputMode="text" autoComplete="postal-code"
+                      aria-invalid={postalBad} className={`${input} ${postalBad ? "!border-red-500" : ""}`} />
+                  </label>
+                  {postalBad && <p role="alert" className="mt-1 text-xs text-red-700">الرمز لا يطابق صيغة الدولة المختارة{c.postal_hint ? ` (${c.postal_hint})` : ""}.</p>}
+                  {hits.length > 0 && (
+                    <ul className="mt-2 flex flex-wrap gap-2" aria-label="أماكن مطابقة للرمز البريدي">
+                      {hits.map((h) => (
+                        <li key={`${h.code}-${h.place_name}`}>
+                          <button type="button" onClick={() => setF((p) => ({ ...p, postal: h.code, city: p.city || h.place_name }))}
+                            className="rounded-full border border-gold/50 bg-pearl px-3 py-1.5 text-xs hover:bg-gold hover:text-ink transition-colors">
+                            <bdi dir="ltr">{h.code}</bdi> · {h.place_name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </>
+            )}
+            {L("أقرب معلم (اختياري)", "landmark")}
+            <label className="block text-sm font-semibold">ملاحظات الطلب (اختياري)
+              <textarea value={f.notes ?? ""} onChange={set("notes")} rows={3} maxLength={500} className={input} />
+            </label>
+          </section>
+        )}
       </div>
 
       <aside className="rounded-3xl bg-ink text-pearl p-6 lg:sticky lg:top-28">
@@ -216,7 +245,7 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
         <div className="mt-5 space-y-2 text-sm">
           <p className="flex justify-between"><span>المجموع الفرعي</span><span>{formatBHD(subtotal)}</span></p>
           {discount > 0 && <p className="flex justify-between text-emerald-300"><span>الخصم</span><span>−{formatBHD(discount)}</span></p>}
-          <p className="flex justify-between"><span>الشحن</span><span>{shipping === 0 ? "مجاني" : formatBHD(shipping)}</span></p>
+          <p className="flex justify-between"><span>الشحن إلى {c.name_ar}</span><span>{shipping === 0 ? "مجاني" : formatBHD(shipping)}</span></p>
           <p className="flex justify-between font-bold text-lg border-t border-white/15 pt-3 text-gold">
             <span>الإجمالي</span><span>{formatBHD(net + shipping)}</span></p>
         </div>
@@ -226,8 +255,8 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
         {belowMin && <p className="mt-3 text-sm text-amber-300">الحد الأدنى للطلب لهذا البلد {formatBHD(c.min_order_minor)}.</p>}
         <p className="mt-3 text-xs opacity-60">سيتم احتساب المبلغ النهائي والتحقق من التوفر عند تأكيد الطلب. الأسعار والدفع بالدينار البحريني.</p>
         {err && <p role="alert" className="mt-4 text-sm text-red-300">{err}</p>}
-        <button disabled={busy || belowMin} className="btn-gold mt-5 w-full disabled:opacity-40 disabled:hover:translate-y-0">
-          {busy ? "جارٍ إرسال الطلب…" : "تأكيد الطلب"}
+        <button disabled={busy || belowMin || !showAddress} className="btn-gold mt-5 w-full disabled:opacity-40 disabled:hover:translate-y-0">
+          {busy ? "جارٍ إرسال الطلب…" : showAddress ? "تأكيد الطلب" : "اختر موقع التوصيل أولاً"}
         </button>
       </aside>
     </form>
