@@ -32,7 +32,8 @@ const items = [
  ["jewelry","DEMO-JWL-001","demo-pearl-necklace","عقد لؤلؤ","عقد بتصميم كلاسيكي مستوحى من لؤلؤ الخليج."+D,56000,null,[["واحد","لؤلؤي",6]]],
  ["oud-incense","DEMO-OUD-001","demo-oud-incense","بخور عود ملكي","بخور بروائح العود الدافئة، علبة ٥٠ غرام."+D,18000,null,[["50 غ","—",14]]],
 ];
-for (const [cat,sku,slug,name,desc,price,sale,vars] of items) {
+if (process.env.SEED_DEMO !== "1") console.log("Skipping demo products (set SEED_DEMO=1 to add them).");
+for (const [cat,sku,slug,name,desc,price,sale,vars] of (process.env.SEED_DEMO === "1" ? items : [])) {
   const [p] = await sql`insert into products (slug,sku,name_ar,description_ar,price_minor,sale_price_minor,status,is_demo,is_featured)
     values (${slug},${sku},${name},${desc},${price},${sale},'published',true,true)
     on conflict (slug) do nothing returning id`;

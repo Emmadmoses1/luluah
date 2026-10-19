@@ -10,7 +10,7 @@ export type PaymentSettings = { crypto_enabled: boolean; order_expiry_hours: num
 
 export const DEFAULT_STORE: StoreSettings = {
   announcement_ar: "", contact_email: "", contact_phone: "", whatsapp: "", address_ar: "", hours_ar: "",
-  instagram: "", x: "", tiktok: "", snapchat: "", facebook: "", show_demo_notice: true, return_days: 14,
+  instagram: "", x: "", tiktok: "", snapchat: "", facebook: "", show_demo_notice: false, return_days: 14,
 };
 export const DEFAULT_PAYMENTS: PaymentSettings = { crypto_enabled: true, order_expiry_hours: 24, instructions_ar: "" };
 

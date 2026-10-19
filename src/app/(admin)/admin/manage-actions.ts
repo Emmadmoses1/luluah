@@ -145,3 +145,28 @@ export async function deleteAdminUser(fd: FormData) {
   await audit(admin.id, "user.delete", { email: t.email });
   redirect("/admin/users?saved=1");
 }
+
+// ---- Payment display settings & newsletter -------------------------------
+import { getSettings, saveSetting } from "@/lib/settings";
+
+export async function savePaymentSettings(fd: FormData) {
+  const admin = await requireAdmin(MANAGERS);
+  const hours = Number(str(fd, "order_expiry_hours").trim());
+  if (!Number.isInteger(hours) || hours < 1 || hours > 168) redirect("/admin/payments?error=hours");
+  const { payments } = await getSettings();
+  const next = {
+    ...payments, crypto_enabled: fd.get("crypto_enabled") === "on",
+    order_expiry_hours: hours, instructions_ar: str(fd, "instructions_ar").trim().slice(0, 1000),
+  };
+  await saveSetting("payments", next);
+  await audit(admin.id, "settings.payments.update", { crypto_enabled: next.crypto_enabled, order_expiry_hours: hours });
+  redirect("/admin/payments?saved=1");
+}
+
+export async function removeSubscriber(fd: FormData) {
+  const admin = await requireAdmin(MANAGERS);
+  const id = uuid.parse(fd.get("id"));
+  await sql`delete from newsletter_subscribers where id = ${id}`;
+  await audit(admin.id, "newsletter.remove", { id });
+  redirect("/admin/newsletter?saved=1");
+}

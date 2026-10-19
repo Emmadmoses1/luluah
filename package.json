@@ -17,7 +17,8 @@
     "places:import": "node --env-file=.env scripts/places-import.mjs",
     "places:import-csv": "node --env-file=.env scripts/places-import-csv.mjs",
     "places:purge": "node --env-file=.env scripts/places-purge.mjs",
-    "places:fetch-osm": "node scripts/places-fetch-osm.mjs"
+    "places:fetch-osm": "node scripts/places-fetch-osm.mjs",
+    "demo:remove": "node --env-file=.env scripts/remove-demo.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
