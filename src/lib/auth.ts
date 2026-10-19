@@ -70,5 +70,5 @@ export async function clientIp(): Promise<string> {
 
 export async function audit(adminId: string | null, action: string, detail: Record<string, unknown> = {}) {
   await sql`insert into audit_logs (admin_id, action, detail)
-            values (${adminId}, ${action}, ${JSON.stringify(detail)}::jsonb)`;
+            values (${adminId}, ${action}, ${sql.json(detail as never)})`;
 }

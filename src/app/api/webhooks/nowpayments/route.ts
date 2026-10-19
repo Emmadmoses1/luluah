@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
   // Idempotency: a repeated delivery of the same event is acknowledged and ignored.
   const ins = await sql`insert into payment_events (provider, event_key, status, payload)
-    values ('nowpayments', ${eventKey}, ${status}, ${raw}::jsonb) on conflict (provider, event_key) do nothing returning id`;
+    values ('nowpayments', ${eventKey}, ${status}, ${sql.json(payload as never)}) on conflict (provider, event_key) do nothing returning id`;
   if (ins.length === 0) return NextResponse.json({ ok: true, duplicate: true });
 
   const release = async () => { try { await sql`delete from payment_events where provider = 'nowpayments' and event_key = ${eventKey}`; } catch {} };

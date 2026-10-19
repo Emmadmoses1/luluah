@@ -26,7 +26,7 @@ export const getSettings = cache(async () => {
 });
 
 export async function saveSetting(key: "store" | "payments", value: object) {
-  await sql`insert into store_settings (key, value) values (${key}, ${JSON.stringify(value)}::jsonb)
+  await sql`insert into store_settings (key, value) values (${key}, ${sql.json(value as never)})
             on conflict (key) do update set value = excluded.value`;
 }
 

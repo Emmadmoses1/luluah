@@ -127,7 +127,7 @@ export async function POST(req: Request) {
         insert into orders (ref, is_test, subtotal_minor, discount_minor, discount_code, shipping_minor, total_minor, customer_name,
           customer_email, customer_phone, country_iso2, address, notes, ip)
         values (${newOrderRef}, ${!LIVE}, ${subtotal}, ${discount}, ${discountCode}, ${shipping}, ${total}, ${b.customer.name},
-          ${b.customer.email || null}, ${phone}, ${co.iso2}, ${JSON.stringify(address)}::jsonb,
+          ${b.customer.email || null}, ${phone}, ${co.iso2}, ${tx.json(address as never)},
           ${b.notes.trim() || null}, ${ip}) returning id`;
       for (const l of lines) {
         await tx`insert into order_items (order_id, variant_id, product_name, variant_label, sku, unit_minor, qty, line_minor)
