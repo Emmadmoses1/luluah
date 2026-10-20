@@ -1,11 +1,12 @@
 import { sql } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
-import { updateCurrency } from "@/app/(admin)/admin/ops-actions";
+import { refreshRates, updateCurrency } from "@/app/(admin)/admin/ops-actions";
 
 const MSG: Record<string, string> = {
   base: "BHD is the base currency and cannot be changed.",
   rate: "The rate must be a positive number with up to 8 decimals.",
   needrate: "A currency needs a rate before it can be enabled.",
+  ratesfail: "Could not fetch live rates right now. Try again later or enter them by hand.",
 };
 
 export default async function Currencies({ searchParams }: { searchParams: Promise<{ saved?: string; error?: string; c?: string }> }) {
@@ -27,6 +28,10 @@ export default async function Currencies({ searchParams }: { searchParams: Promi
           so update them whenever the market moves. Orders keep the amount they were created with.
         </p>
       </div>
+      <form action={refreshRates} className="a-card p-4 mb-4 flex flex-wrap items-center gap-4">
+        <button className="a-btn">Refresh rates from the internet</button>
+        <p className="text-xs text-neutral-500 max-w-xl">Updates only the currencies that are switched on, using free market rates from <a className="underline" href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer">Exchange Rate API</a>. Check the result before relying on it, and edit any rate by hand below.</p>
+      </form>
       {q.saved && <p role="status" className="mb-4 rounded-xl bg-emerald-100 text-emerald-900 px-4 py-3 text-sm">Saved ({q.c}).</p>}
       {q.error && <p role="alert" className="mb-4 rounded-xl bg-red-100 text-red-900 px-4 py-3 text-sm">{q.c}: {MSG[q.error] ?? "Could not save."}</p>}
       <div className="space-y-3">

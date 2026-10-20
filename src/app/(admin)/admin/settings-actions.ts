@@ -25,13 +25,15 @@ export async function saveStoreSettings(fd: FormData) {
   }
   const days = Number(s(fd, "return_days", 3));
   if (!Number.isInteger(days) || days < 0 || days > 90) bad("days");
+  const minQ = Number(s(fd, "min_order_qty", 7)), maxQ = Number(s(fd, "max_order_qty", 7));
+  if (!Number.isInteger(minQ) || !Number.isInteger(maxQ) || minQ < 1 || maxQ > 100000 || minQ > maxQ) bad("qty");
 
   const { store } = await getSettings();
   const next: StoreSettings = {
     ...store, ...social,
     announcement_ar: s(fd, "announcement_ar", 200), contact_email, contact_phone, whatsapp,
     address_ar: s(fd, "address_ar", 300), hours_ar: s(fd, "hours_ar", 200),
-    return_days: days, show_demo_notice: fd.get("show_demo_notice") === "on",
+    return_days: days, min_order_qty: minQ, max_order_qty: maxQ, show_demo_notice: fd.get("show_demo_notice") === "on",
   };
   await saveSetting("store", next);
   await audit(admin.id, "settings.store.update", { fields: Object.keys(next) });

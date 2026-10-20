@@ -5,6 +5,7 @@ import { saveStoreSettings } from "../../settings-actions";
 export const dynamic = "force-dynamic";
 
 const ERR: Record<string, string> = {
+  qty: "Order quantities must be whole numbers: minimum at least 1, maximum at most 100,000, and the minimum not above the maximum.",
   email: "Enter a valid contact email.", phone: "Phone may contain digits, spaces, + ( ) and - only.",
   whatsapp: "WhatsApp number must be digits with an optional leading +.", days: "Return window must be a whole number from 0 to 90.",
   instagram: "Instagram link must start with https://", x: "X link must start with https://", tiktok: "TikTok link must start with https://",
@@ -39,6 +40,10 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <h2 className="font-semibold">Storefront</h2>
           <F label="Announcement bar (Arabic)" name="announcement_ar" v={s.announcement_ar} dir="rtl" hint="Shown above the header. Leave empty for the default welcome text." />
           <F label="Return window (days)" name="return_days" v={String(s.return_days)} dir="ltr" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <F label="Minimum order quantity per item" name="min_order_qty" v={String(s.min_order_qty)} dir="ltr" hint="Customers must order at least this many of one item (or whatever stock is left)." />
+            <F label="Maximum order quantity per item" name="max_order_qty" v={String(s.max_order_qty)} dir="ltr" hint="Up to 100,000. Never more than the stock in hand." />
+          </div>
           <label className="flex items-center gap-3 text-sm">
             <input type="checkbox" name="show_demo_notice" defaultChecked={s.show_demo_notice} className="w-4 h-4 accent-[#a8864a]" />
             Show demonstration-products notice and the legal-review notice on policy pages

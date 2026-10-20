@@ -33,7 +33,11 @@ export default async function OrderDetail({ params, searchParams }: {
     from orders where id = ${id}`;
   if (!o) notFound();
   const items = await sql<{ product_name: string; variant_label: string | null; sku: string; unit_minor: string; qty: number; line_minor: string }[]>`
-    select product_name, variant_label, sku, unit_minor, qty, line_minor from order_items where order_id = ${id}`;
+    select coalesce(p.name_en, oi.product_name) as product_name,
+           coalesce(nullif(concat_ws(' · ', v.size, coalesce(v.color_en, v.color_ar)), ''), oi.variant_label) as variant_label,
+           oi.sku, oi.unit_minor, oi.qty, oi.line_minor
+    from order_items oi left join product_variants v on v.id = oi.variant_id left join products p on p.id = v.product_id
+    where oi.order_id = ${id}`;
   const pays = await sql<{ id: string; provider: string; status: string; provider_invoice_id: string | null; price_amount: string;
     price_currency: string; pay_currency: string | null; pay_amount: string | null; actually_paid: string | null;
     expires_at: Date | null; created_at: Date; updated_at: Date }[]>`

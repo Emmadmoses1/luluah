@@ -3,9 +3,9 @@ import { sql } from "@/lib/db";
 import Badge from "@/components/admin/Badge";
 
 export default async function Products() {
-  const rows = await sql<{ id: string; name_ar: string; sku: string; price_minor: string;
+  const rows = await sql<{ id: string; name_ar: string; name_en: string | null; sku: string; price_minor: string;
     status: string; is_demo: boolean; stock: string; image: string | null }[]>`
-    select p.id, p.name_ar, p.sku, p.price_minor, p.status, p.is_demo,
+    select p.id, p.name_ar, p.name_en, p.sku, p.price_minor, p.status, p.is_demo,
            coalesce(sum(v.stock), 0) as stock,
            (select coalesce(i.thumb_path, i.path) from product_images i where i.product_id = p.id order by i.sort_order, i.id limit 1) as image
     from products p left join product_variants v on v.product_id = p.id
@@ -23,7 +23,7 @@ export default async function Products() {
         <table className="a-table">
           <thead><tr><th>Product</th><th>SKU</th><th>Price (BHD)</th><th>Stock</th><th>Status</th><th></th></tr></thead>
           <tbody>
-            {rows.length === 0 && <tr><td colSpan={6} className="text-neutral-500">No products yet.</td></tr>}
+            {rows.length === 0 && <tr><td colSpan={6} className="text-neutral-500">No products yet. Add your first product.</td></tr>}
             {rows.map((r) => (
               <tr key={r.id}>
                 <td>
@@ -32,7 +32,10 @@ export default async function Products() {
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       {r.image && <img src={r.image} alt="" className="w-full h-full object-cover" />}
                     </span>
-                    <span dir="rtl">{r.name_ar}</span>
+                    <span className="min-w-0">
+                      <span className="block font-medium" dir="auto">{r.name_en ?? r.name_ar}</span>
+                      {r.name_en && <span className="block text-xs text-neutral-400" dir="rtl">{r.name_ar}</span>}
+                    </span>
                     {r.is_demo && <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">DEMO</span>}
                   </div>
                 </td>

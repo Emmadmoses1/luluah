@@ -19,6 +19,7 @@ const NAV: [string, string, string][] = [
   ["/admin/launch", "Launch checklist", "M5 21V4M5 4h11l-2 4 2 4H5"],
   ["/admin/payments", "Payment settings", "M3 7h18v12H3zM3 11h18M7 15h3"],
   ["/admin/newsletter", "Newsletter", "M3 6h18v12H3zM3 7l9 7 9-7"],
+  ["/admin/postal", "Postal codes", "M3 7l9-4 9 4v10l-9 4-9-4V7zM8 11h8M8 15h5"],
   ["/admin/shipping", "Shipping", "M3 7h11v9H3zM14 10h4l3 3v3h-7"],
   ["/admin/settings", "Store Settings", "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19 12l2-1-2-4-2 .5-1.5-1L15 4h-4l-.5 2.5-1.5 1L7 7 5 11l2 1v1l-2 1 2 4 2-.5 1.5 1L11 20h4l.5-2.5 1.5-1 2 .5 2-4-2-1v-1z"],
   ["/admin/change-password", "Change password", "M7 11V8a5 5 0 0 1 10 0v3M5 11h14v10H5z"],

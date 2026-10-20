@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { clearCart, readCart } from "@/lib/cart";
 import { formatBHD } from "@/lib/money";
+import { formatMoney, type Cur } from "@/lib/currency";
 import { BH_REGIONS, shippingFor } from "@/lib/shipping";
 import { bahrainRegion } from "@/lib/places-util";
 import PlaceInput from "./PlaceInput";
@@ -12,10 +13,10 @@ import LocationPicker, { type PickedPlace } from "./LocationPicker";
 export type CountryOpt = {
   iso2: string; name_ar: string; dial_code: string; fee_minor: number; free_over_minor: number | null;
   min_order_minor: number; eta_min_days: number | null; eta_max_days: number | null;
-  postal_regex: string | null; postal_hint: string | null;
+  postal_regex: string | null; postal_hint: string | null; cur: Cur | null;
 };
 type Line = { variantId: string; name: string; size: string | null; color: string | null;
-  unitMinor: number; qty: number; lineMinor: number; available: boolean };
+  unitMinor: number; qty: number; requested: number; lineMinor: number; available: boolean };
 type Hit = { code: string; place_name: string; admin_name: string | null };
 
 const KEYS = ["region", "city", "area", "block", "road", "street", "building", "apartment", "postal", "landmark"];
@@ -23,9 +24,18 @@ const input = "mt-1.5 w-full rounded-xl border border-beige bg-white px-4 py-3 o
 const card = "rounded-3xl border border-beige bg-white/70 backdrop-blur p-5 md:p-7 space-y-4";
 const toWestern = (s: string) => s.replace(/[٠-٩]/g, (d) => String(d.charCodeAt(0) - 1632));
 
+function Step({ n, t }: { n: string; t: string }) {
+  return (
+    <h2 className="flex items-center gap-3 font-display text-2xl font-bold">
+      <span className="w-8 h-8 rounded-full bg-ink text-gold grid place-items-center text-sm font-sans">{n}</span>{t}
+    </h2>
+  );
+}
+
 export default function CheckoutForm({ countries }: { countries: CountryOpt[] }) {
   const router = useRouter();
   const [lines, setLines] = useState<Line[] | null>(null);
+  const [loadErr, setLoadErr] = useState(false);
   const [subtotal, setSubtotal] = useState(0);
   const [iso, setIso] = useState(countries.find((c) => c.iso2 === "BH")?.iso2 ?? countries[0].iso2);
   const [f, setF] = useState<Record<string, string>>({});
@@ -37,8 +47,8 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
   const [hits, setHits] = useState<Hit[]>([]);
   const [picked, setPicked] = useState<PickedPlace | null>(null);
   const [manual, setManual] = useState(false);
-  const c = countries.find((x) => x.iso2 === iso)!;
-  const bh = iso === "BH";
+  const c = countries.find((x) => x.iso2 === iso) ?? countries[0];
+  const bh = c.iso2 === "BH";
   const showAddress = picked !== null || manual;
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
@@ -48,9 +58,12 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
     const items = readCart();
     if (items.length === 0) { setLines([]); return; }
     fetch("/api/cart", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items }) })
-      .then((r) => r.json())
-      .then((d) => { setLines(d.lines); setSubtotal(d.subtotalMinor); })
-      .catch(() => setErr("تعذّر تحميل السلة."));
+      .then(async (r) => {
+        const d = await r.json().catch(() => null);
+        if (!r.ok || !d || !Array.isArray(d.lines)) throw new Error("bad cart response");
+        setLines(d.lines); setSubtotal(Number(d.subtotalMinor) || 0);
+      })
+      .catch(() => setLoadErr(true));
   }, []);
 
   const postal = (f.postal ?? "").trim();
@@ -58,14 +71,26 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
     if (bh || postal.length < 3) { setHits([]); return; }
     const ctl = new AbortController();
     const t = setTimeout(() => {
-      fetch(`/api/places?country=${iso}&postal=${encodeURIComponent(postal)}`, { signal: ctl.signal })
+      fetch(`/api/places?country=${c.iso2}&postal=${encodeURIComponent(postal)}`, { signal: ctl.signal })
         .then((r) => (r.ok ? r.json() : null))
-        .then((d) => { if (d) setHits(d.postals ?? []); })
+        .then((d) => { if (d && Array.isArray(d.postals)) setHits(d.postals); })
         .catch(() => {});
     }, 250);
     return () => { clearTimeout(t); ctl.abort(); };
-  }, [postal, iso, bh]);
+  }, [postal, c.iso2, bh]);
 
+  if (loadErr) {
+    return (
+      <div className="text-center py-16" role="alert">
+        <p className="font-display text-2xl font-bold">تعذّر تحميل سلتك</p>
+        <p className="mt-2 text-sm opacity-70">يرجى المحاولة مرة أخرى.</p>
+        <div className="mt-6 flex gap-3 justify-center">
+          <button type="button" onClick={() => location.reload()} className="btn-dark">إعادة المحاولة</button>
+          <Link href="/cart" className="btn-ghost !text-ink !border-beige">العودة إلى السلة</Link>
+        </div>
+      </div>
+    );
+  }
   if (lines === null) {
     return <div className="space-y-4" aria-busy="true"><div className="skeleton h-40 rounded-3xl" /><div className="skeleton h-64 rounded-3xl" /></div>;
   }
@@ -78,15 +103,22 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
     );
   }
 
+  const cartNeedsReview = lines.some((l) => !l.available || l.qty !== l.requested);
   const discount = applied ? Math.min(applied.amountMinor, subtotal) : 0;
   const net = subtotal - discount;
   const shipping = shippingFor(c, net);
+  const total = net + shipping;
   const belowMin = subtotal < c.min_order_minor;
   const postalBad = Boolean(postal && c.postal_regex && !new RegExp(c.postal_regex).test(toWestern(postal).toUpperCase()));
+  const local = (minor: number) => (c.cur ? formatMoney(minor, c.cur) : null);
 
+  function rememberCurrency(code: string) {
+    const co = countries.find((x) => x.iso2 === code);
+    document.cookie = `lu_cur=${co?.cur?.code ?? "BHD"}; path=/; max-age=31536000; samesite=lax`;
+  }
   function pick(p: PickedPlace) {
     if (!countries.some((x) => x.iso2 === p.iso2)) return;
-    setIso(p.iso2); setPicked(p); setManual(false); setHits([]);
+    setIso(p.iso2); setPicked(p); setManual(false); setHits([]); rememberCurrency(p.iso2);
     setF((prev) => p.iso2 === "BH"
       ? { ...prev, region: bahrainRegion(p.admin) ?? "", area: p.name, city: "", postal: "" }
       : { ...prev, region: "", city: p.name, area: "", postal: "" });
@@ -107,6 +139,7 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (cartNeedsReview) { setErr("راجع السلة أولاً: بعض الكميات أو المنتجات تغيّرت."); return; }
     if (!showAddress) { setErr("اختر موقع التوصيل أولاً."); return; }
     if (postalBad) { setErr("الرمز البريدي غير مطابق لصيغة الدولة المختارة."); return; }
     setErr(""); setBusy(true);
@@ -115,11 +148,11 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
       for (const k of KEYS) address[k] = f[k] ?? "";
       const r = await fetch("/api/checkout", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: readCart(), country: iso, code: applied?.code,
+        body: JSON.stringify({ items: readCart(), country: c.iso2, code: applied?.code,
           customer: { name: f.name ?? "", email: f.email ?? "", phone: f.phone ?? "" }, address, notes: f.notes ?? "" }),
       });
       const d = await r.json().catch(() => ({}));
-      if (!r.ok) { setErr(d.error ?? "تعذّر إتمام الطلب. حاول مرة أخرى."); setBusy(false); return; }
+      if (!r.ok || typeof d.ref !== "string") { setErr(d.error ?? "تعذّر إتمام الطلب. حاول مرة أخرى."); setBusy(false); return; }
       clearCart();
       router.push(`/order/${d.ref}`);
     } catch { setErr("تعذّر الاتصال بالخادم. حاول مرة أخرى."); setBusy(false); }
@@ -129,11 +162,6 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
     <label className="block text-sm font-semibold">{label}{o.req ? " *" : ""}
       <input value={f[k] ?? ""} onChange={set(k)} required={o.req} dir={o.dir} inputMode={o.mode} className={input} />
     </label>
-  );
-  const Step = ({ n, t }: { n: string; t: string }) => (
-    <h2 className="flex items-center gap-3 font-display text-2xl font-bold">
-      <span className="w-8 h-8 rounded-full bg-ink text-gold grid place-items-center text-sm font-sans">{n}</span>{t}
-    </h2>
   );
 
   return (
@@ -164,7 +192,7 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
           <section className={`${card} hero-in`}>
             <Step n="٣" t="تفاصيل العنوان" />
             <label className="block text-sm font-semibold">الدولة *
-              <select value={iso} onChange={(e) => { setIso(e.target.value); setHits([]); setPicked(null); setF((p) => ({ ...p, region: "", city: "", area: "", postal: "" })); }} className={input}>
+              <select value={c.iso2} onChange={(e) => { setIso(e.target.value); rememberCurrency(e.target.value); setHits([]); setPicked(null); setF((p) => ({ ...p, region: "", city: "", area: "", postal: "" })); }} className={input}>
                 {countries.map((x) => <option key={x.iso2} value={x.iso2}>{x.name_ar}</option>)}
               </select>
             </label>
@@ -176,7 +204,7 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
                     {BH_REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </label>
-                <PlaceInput country={iso} label="المنطقة" required value={f.area ?? ""} onChange={put("area")} className={input} />
+                <PlaceInput country={c.iso2} label="المنطقة" required value={f.area ?? ""} onChange={put("area")} className={input} />
                 <div className="grid grid-cols-3 gap-3">
                   {L("المجمّع", "block", { req: true, mode: "numeric" })}
                   {L("الطريق", "road", { req: true, mode: "numeric" })}
@@ -187,7 +215,7 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
             ) : (
               <>
                 {L("المنطقة أو الولاية (اختياري)", "region")}
-                <PlaceInput country={iso} label="المدينة" required value={f.city ?? ""} onChange={put("city")} className={input} />
+                <PlaceInput country={c.iso2} label="المدينة" required value={f.city ?? ""} onChange={put("city")} className={input} />
                 {L("الحي أو المنطقة (اختياري)", "area")}
                 {L("الشارع", "street", { req: true })}
                 <div className="grid grid-cols-2 gap-3">
@@ -236,6 +264,11 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
             </li>
           ))}
         </ul>
+        {cartNeedsReview && (
+          <p role="alert" className="mt-3 rounded-xl bg-amber-500/15 text-amber-200 p-3 text-xs leading-6">
+            تغيّرت بعض الكميات أو المنتجات حسب المتوفر والحدود المسموحة. <Link href="/cart" className="underline font-bold">راجع السلة</Link> قبل المتابعة.
+          </p>
+        )}
         <div className="mt-4 flex gap-2">
           <input value={codeInput} onChange={(e) => setCodeInput(e.target.value)} dir="ltr" placeholder="رمز الخصم"
             className="flex-1 min-w-0 rounded-full bg-white/10 border border-white/20 px-4 py-2 text-sm outline-none focus:border-gold" />
@@ -247,15 +280,17 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
           {discount > 0 && <p className="flex justify-between text-emerald-300"><span>الخصم</span><span>−{formatBHD(discount)}</span></p>}
           <p className="flex justify-between"><span>الشحن إلى {c.name_ar}</span><span>{shipping === 0 ? "مجاني" : formatBHD(shipping)}</span></p>
           <p className="flex justify-between font-bold text-lg border-t border-white/15 pt-3 text-gold">
-            <span>الإجمالي</span><span>{formatBHD(net + shipping)}</span></p>
+            <span>الإجمالي</span><span>{formatBHD(total)}</span></p>
+          {local(total) && <p className="text-end text-sm opacity-80">≈ {local(total)}</p>}
         </div>
+        {c.cur && <p className="mt-2 text-xs opacity-60 leading-6">المبلغ بعملتك تقريبي حسب سعر الصرف ({c.cur.code}). يتم احتساب الطلب والدفع بالدينار البحريني.</p>}
         {c.eta_min_days !== null && c.eta_max_days !== null && (
           <p className="mt-3 text-sm opacity-70">مدة التوصيل المتوقعة: {c.eta_min_days.toLocaleString("ar")}–{c.eta_max_days.toLocaleString("ar")} أيام عمل</p>
         )}
         {belowMin && <p className="mt-3 text-sm text-amber-300">الحد الأدنى للطلب لهذا البلد {formatBHD(c.min_order_minor)}.</p>}
-        <p className="mt-3 text-xs opacity-60">سيتم احتساب المبلغ النهائي والتحقق من التوفر عند تأكيد الطلب. الأسعار والدفع بالدينار البحريني.</p>
+        <p className="mt-3 text-xs opacity-60">سيتم احتساب المبلغ النهائي والتحقق من التوفر عند تأكيد الطلب.</p>
         {err && <p role="alert" className="mt-4 text-sm text-red-300">{err}</p>}
-        <button disabled={busy || belowMin || !showAddress} className="btn-gold mt-5 w-full disabled:opacity-40 disabled:hover:translate-y-0">
+        <button disabled={busy || belowMin || !showAddress || cartNeedsReview} className="btn-gold mt-5 w-full disabled:opacity-40 disabled:hover:translate-y-0">
           {busy ? "جارٍ إرسال الطلب…" : showAddress ? "تأكيد الطلب" : "اختر موقع التوصيل أولاً"}
         </button>
       </aside>

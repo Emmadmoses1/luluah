@@ -5,12 +5,13 @@ export type StoreSettings = {
   announcement_ar: string; contact_email: string; contact_phone: string; whatsapp: string;
   address_ar: string; hours_ar: string; instagram: string; x: string; tiktok: string;
   snapchat: string; facebook: string; show_demo_notice: boolean; return_days: number;
+  min_order_qty: number; max_order_qty: number;
 };
 export type PaymentSettings = { crypto_enabled: boolean; order_expiry_hours: number; instructions_ar: string };
 
 export const DEFAULT_STORE: StoreSettings = {
   announcement_ar: "", contact_email: "", contact_phone: "", whatsapp: "", address_ar: "", hours_ar: "",
-  instagram: "", x: "", tiktok: "", snapchat: "", facebook: "", show_demo_notice: false, return_days: 14,
+  instagram: "", x: "", tiktok: "", snapchat: "", facebook: "", show_demo_notice: false, return_days: 14, min_order_qty: 20, max_order_qty: 100000,
 };
 export const DEFAULT_PAYMENTS: PaymentSettings = { crypto_enabled: true, order_expiry_hours: 24, instructions_ar: "" };
 

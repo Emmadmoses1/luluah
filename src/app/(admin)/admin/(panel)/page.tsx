@@ -26,7 +26,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
     left join orders o on o.created_at::date = g::date and not o.is_test and o.payment_status = 'paid' and o.currency_code = 'BHD'
     group by g order by g`;
   const top = await sql<{ name_ar: string; qty: string }[]>`
-    select p.name_ar, sum(oi.qty) as qty
+    select coalesce(p.name_en, p.name_ar) as name_ar, sum(oi.qty) as qty
     from order_items oi join orders o on o.id = oi.order_id
       join product_variants v on v.id = oi.variant_id join products p on p.id = v.product_id
     where o.payment_status = 'paid' and not o.is_test
@@ -86,7 +86,7 @@ export default async function Dashboard({ searchParams }: { searchParams: Promis
               {top.map((t, i) => (
                 <li key={t.name_ar} className="flex items-center gap-3">
                   <span className="w-6 h-6 rounded-full bg-[#faf6ee] text-[#a8864a] grid place-items-center text-xs font-bold">{i + 1}</span>
-                  <span dir="rtl" className="flex-1 truncate">{t.name_ar}</span>
+                  <span dir="auto" className="flex-1 truncate">{t.name_ar}</span>
                   <span className="tabular-nums text-neutral-500">{t.qty}</span>
                 </li>
               ))}

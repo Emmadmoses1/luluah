@@ -13,7 +13,7 @@ export default async function Reviews({ searchParams }: { searchParams: Promise<
   const n = (s: string) => counts.find((c) => c.status === s)?.n ?? "0";
   const rows = await sql<{ id: string; author_name: string; rating: number; body: string; created_at: Date;
     product: string; ref: string }[]>`
-    select r.id, r.author_name, r.rating, r.body, r.created_at, p.name_ar as product, o.ref
+    select r.id, r.author_name, r.rating, r.body, r.created_at, coalesce(p.name_en, p.name_ar) as product, o.ref
     from reviews r join products p on p.id = r.product_id join orders o on o.id = r.order_id
     where r.status = ${tab} order by r.created_at desc limit 100`;
   const btn = "rounded-xl px-4 py-2 text-sm font-semibold transition-colors";
@@ -42,7 +42,7 @@ export default async function Reviews({ searchParams }: { searchParams: Promise<
               <p className="font-semibold" dir="auto">{r.author_name} <span className="text-amber-500 ml-2">{"★".repeat(r.rating)}<span className="text-neutral-300">{"★".repeat(5 - r.rating)}</span></span></p>
               <p className="text-xs text-neutral-500">{r.created_at.toISOString().slice(0, 10)} · order LU-{r.ref.slice(0, 4)}-{r.ref.slice(4, 8)}-{r.ref.slice(8)}</p>
             </div>
-            <p className="mt-1 text-sm text-neutral-500" dir="rtl">{r.product}</p>
+            <p className="mt-1 text-sm text-neutral-500" dir="auto">{r.product}</p>
             {r.body && <p className="mt-3 text-sm leading-7" dir="auto">{r.body}</p>}
             <form action={moderateReview} className="mt-4 flex flex-wrap gap-2">
               <input type="hidden" name="id" value={r.id} /><input type="hidden" name="tab" value={tab} />

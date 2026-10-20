@@ -8,6 +8,8 @@ import { sendEmail } from "@/lib/email";
 import { adminNewOrderEmail, orderReceivedEmail } from "@/lib/email-templates";
 import { formatMoney } from "@/lib/currency";
 import { westernDigits } from "@/lib/arabic";
+import { getSettings } from "@/lib/settings";
+import { HARD_MAX_QTY, limitsFor } from "@/lib/qty";
 
 class Fail extends Error {
   constructor(public status: number, message: string) { super(message); }
@@ -18,7 +20,7 @@ const newRef = () => Array.from(randomBytes(12), (b) => ALPHABET[b & 31]).join("
 const ADDR_KEYS = ["region", "city", "area", "block", "road", "street", "building", "apartment", "postal", "landmark"];
 
 const Body = z.object({
-  items: z.array(z.object({ variantId: z.string().uuid(), qty: z.number().int().min(1).max(20) })).min(1).max(50),
+  items: z.array(z.object({ variantId: z.string().uuid(), qty: z.number().int().min(1).max(100000) })).min(1).max(50),
   country: z.string().regex(/^[A-Z]{2}$/),
   customer: z.object({ name: z.string().trim().min(2).max(100), email: z.string().trim().max(200), phone: z.string().trim().min(5).max(30) }),
   address: z.record(z.string(), z.string()).default({}),
@@ -65,8 +67,9 @@ export async function POST(req: Request) {
   if (Number(rl.n) >= 10) return NextResponse.json({ error: "تم تجاوز عدد الطلبات المسموح به. حاول لاحقاً." }, { status: 429 });
 
   const want = new Map<string, number>();
-  for (const i of b.items) want.set(i.variantId, Math.min((want.get(i.variantId) ?? 0) + i.qty, 20));
+  for (const i of b.items) want.set(i.variantId, Math.min((want.get(i.variantId) ?? 0) + i.qty, HARD_MAX_QTY));
   const ids = [...want.keys()];
+  const { store: cfg } = await getSettings();
   const code = b.code ? normalizeCode(b.code) : "";
 
   try {
@@ -90,6 +93,8 @@ export async function POST(req: Request) {
         const qty = want.get(id)!;
         if (!r) throw new Fail(409, "أحد المنتجات في سلتك لم يعد متوفراً. يرجى مراجعة السلة.");
         if (r.stock < qty) throw new Fail(409, `الكمية المطلوبة من «${r.name_ar}» غير متوفرة. يرجى تعديل السلة.`);
+        const lim = limitsFor(r.stock, cfg.min_order_qty, cfg.max_order_qty);
+        if (qty < lim.min || qty > lim.max) throw new Fail(409, `الكمية المسموحة من «${r.name_ar}» بين ${lim.min.toLocaleString("ar")} و${lim.max.toLocaleString("ar")}. يرجى تعديل السلة.`);
         const unit = Number(r.sale_price_minor ?? r.price_minor);
         subtotal += unit * qty;
         const label = [r.size, r.color_ar].filter((x) => x && x !== "—").join(" · ") || null;

@@ -21,9 +21,9 @@ export default async function Inventory({ searchParams }: { searchParams: Promis
     from product_variants v join products pr on pr.id = v.product_id where pr.status <> 'archived'`;
   const rows = await sql<{ id: string; sku: string; size: string | null; color_ar: string | null; stock: number;
     name_ar: string; pid: string; status: string }[]>`
-    select v.id, v.sku, v.size, v.color_ar, v.stock, pr.name_ar, pr.id as pid, pr.status
+    select v.id, v.sku, v.size, coalesce(v.color_en, v.color_ar) as color_ar, v.stock, coalesce(pr.name_en, pr.name_ar) as name_ar, pr.id as pid, pr.status
     from product_variants v join products pr on pr.id = v.product_id
-    where pr.status <> 'archived' and (${q} = '' or v.sku ilike ${like} or pr.name_ar ilike ${like})
+    where pr.status <> 'archived' and (${q} = '' or v.sku ilike ${like} or pr.name_ar ilike ${like} or pr.name_en ilike ${like})
       and (${low} = false or v.stock <= ${LOW})
     order by v.stock, pr.name_ar limit 200`;
   const tab = (on: boolean) => `rounded-full px-4 py-1.5 text-sm font-medium ${on ? "bg-[#0c0a09] text-[#c9a96e]" : "bg-white border border-neutral-200 hover:border-[#c9a96e]"}`;
@@ -61,7 +61,7 @@ export default async function Inventory({ searchParams }: { searchParams: Promis
             {rows.length === 0 && <tr><td colSpan={5} className="text-neutral-500">Nothing matches.</td></tr>}
             {rows.map((r) => (
               <tr key={r.id} className={p.v === r.id ? "!bg-emerald-50" : ""}>
-                <td dir="rtl"><Link className="hover:underline" href={`/admin/products/${r.pid}`}>{r.name_ar}</Link>
+                <td dir="auto"><Link className="hover:underline" href={`/admin/products/${r.pid}`}>{r.name_ar}</Link>
                   {r.status !== "published" && <span className="mr-2 text-[10px] bg-neutral-200 px-1.5 py-0.5 rounded">{r.status}</span>}</td>
                 <td dir="auto">{[r.size, r.color_ar].filter((x) => x && x !== "—").join(" · ") || "Standard"}</td>
                 <td className="font-mono text-xs">{r.sku}</td>

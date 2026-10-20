@@ -2,11 +2,20 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { z } from "zod";
 import { sql } from "@/lib/db";
-import { updateProduct } from "../../../actions";
+import { updateProduct } from "@/app/(admin)/admin/catalog-actions";
+import { translationProvider } from "@/lib/translate";
 import Field from "@/components/admin/Field";
+import TranslationNotice, { TRANSLATE_ERRORS } from "@/components/admin/TranslationNotice";
 
-type P = { id: string; name_ar: string; description_ar: string; sku: string; price_minor: string;
-  sale_price_minor: string | null; status: string; is_featured: boolean; is_demo: boolean };
+type P = { id: string; name_ar: string; name_en: string | null; description_ar: string; description_en: string | null; sku: string;
+  price_minor: string; sale_price_minor: string | null; status: string; is_featured: boolean; is_demo: boolean };
+
+const MSG: Record<string, string> = {
+  ...TRANSLATE_ERRORS,
+  price: "Invalid price. Use up to 3 decimals; the sale price must be lower than the price.",
+  stock: "Stock must be a whole number from 0 to 100000.",
+  fields: "The Arabic name could not be created. Enter an English name, or type the Arabic name yourself.",
+};
 
 export default async function EditProduct({ params, searchParams }: {
   params: Promise<{ id: string }>; searchParams: Promise<{ saved?: string; error?: string }>;
@@ -14,12 +23,13 @@ export default async function EditProduct({ params, searchParams }: {
   const { id } = await params;
   const q = await searchParams;
   if (!z.string().uuid().safeParse(id).success) notFound();
-  const [p] = await sql<P[]>`select id, name_ar, description_ar, sku, price_minor, sale_price_minor,
+  const [p] = await sql<P[]>`select id, name_ar, name_en, description_ar, description_en, sku, price_minor, sale_price_minor,
     status, is_featured, is_demo from products where id = ${id}`;
   if (!p) notFound();
-  const vs = await sql<{ id: string; sku: string; size: string | null; color_ar: string | null; stock: number }[]>`
-    select id, sku, size, color_ar, stock from product_variants where product_id = ${id} order by sku`;
+  const vs = await sql<{ id: string; sku: string; size: string | null; color: string | null; stock: number }[]>`
+    select id, sku, size, coalesce(color_en, color_ar) as color, stock from product_variants where product_id = ${id} order by sku`;
   const bhd = (m: string | null) => (m === null ? "" : (Number(m) / 1000).toFixed(3));
+  const canTranslate = translationProvider() !== null;
 
   return (
     <form action={updateProduct} className="max-w-3xl space-y-6">
@@ -35,15 +45,26 @@ export default async function EditProduct({ params, searchParams }: {
           </span>
         </div>
       </div>
+      <TranslationNotice />
       {q.saved && <p role="status" className="rounded-xl bg-emerald-100 text-emerald-900 px-4 py-3 text-sm">Saved.</p>}
-      {q.error && <p role="alert" className="rounded-xl bg-red-100 text-red-900 px-4 py-3 text-sm">
-        {q.error === "price" ? "Invalid price. Use up to 3 decimals; the sale price must be lower than the price."
-          : q.error === "stock" ? "Stock must be a whole number from 0 to 100000." : "Please check the fields."}</p>}
+      {q.error && <p role="alert" className="rounded-xl bg-red-100 text-red-900 px-4 py-3 text-sm">{MSG[q.error] ?? "Please check the fields."}</p>}
 
       <section className="a-card p-6 space-y-4">
-        <h2 className="font-semibold">Storefront content (Arabic)</h2>
-        <Field label="Name"><input name="name_ar" dir="rtl" defaultValue={p.name_ar} required className="a-input" /></Field>
-        <Field label="Description"><textarea name="description_ar" dir="rtl" rows={5} defaultValue={p.description_ar} className="a-input" /></Field>
+        <h2 className="font-semibold">Product details (English)</h2>
+        <Field label="Name"><input name="name_en" defaultValue={p.name_en ?? ""} maxLength={200} className="a-input" /></Field>
+        <Field label="Description"><textarea name="description_en" rows={5} defaultValue={p.description_en ?? ""} maxLength={5000} className="a-input" /></Field>
+      </section>
+
+      <section className="a-card p-6 space-y-4">
+        <h2 className="font-semibold">Arabic text shown to customers</h2>
+        <Field label="Arabic name"><input name="name_ar" dir="rtl" defaultValue={p.name_ar} maxLength={200} className="a-input" /></Field>
+        <Field label="Arabic description"><textarea name="description_ar" dir="rtl" rows={5} defaultValue={p.description_ar} maxLength={5000} className="a-input" /></Field>
+        {canTranslate && (
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="retranslate" className="w-4 h-4 mt-0.5 accent-[#a8864a]" />
+            <span>Re-translate the Arabic from the English above when I save <span className="text-neutral-500">(this replaces any Arabic edits)</span></span>
+          </label>
+        )}
       </section>
 
       <section className="a-card p-6 space-y-4">
@@ -68,7 +89,7 @@ export default async function EditProduct({ params, searchParams }: {
         <div className="divide-y divide-neutral-100">
           {vs.map((v) => (
             <label key={v.id} className="flex items-center justify-between gap-3 text-sm py-2.5">
-              <span dir="auto">{[v.size, v.color_ar].filter(Boolean).join(" · ") || "Standard"} <span className="text-neutral-400 font-mono text-xs">{v.sku}</span></span>
+              <span dir="auto">{[v.size, v.color].filter(Boolean).join(" · ") || "Standard"} <span className="text-neutral-400 font-mono text-xs">{v.sku}</span></span>
               <input name={`stock_${v.id}`} inputMode="numeric" defaultValue={v.stock} className="a-input !w-28" />
             </label>
           ))}

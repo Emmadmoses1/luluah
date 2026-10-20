@@ -213,3 +213,40 @@ export async function setSpin360(fd: FormData) {
   await audit(admin.id, "product.spin360", { id, on });
   redirect(`/admin/products/${id}/images?saved=1`);
 }
+
+// ---- Postal codes admin ------------------------------------------------------
+import { parsePostalCsv } from "@/lib/postal-csv";
+
+export async function savePostalFormat(fd: FormData) {
+  const admin = await requireAdmin(MANAGERS);
+  const iso = z.string().regex(/^[A-Z]{2}$/).parse(fd.get("iso2"));
+  const regex = str(fd, "postal_regex").trim();
+  const hint = str(fd, "postal_hint").trim().slice(0, 60);
+  if (regex) {
+    if (regex.length > 80 || !regex.startsWith("^") || !regex.endsWith("$")) redirect(`/admin/postal?error=regex&c=${iso}`);
+    try { new RegExp(regex); } catch { redirect(`/admin/postal?error=regex&c=${iso}`); }
+  }
+  await sql`update countries set postal_regex = ${regex || null}, postal_hint = ${hint || null} where iso2 = ${iso}`;
+  await audit(admin.id, "postal.format", { iso, regex, hint });
+  redirect(`/admin/postal?saved=1&c=${iso}`);
+}
+
+export async function importPostalCsv(fd: FormData) {
+  const admin = await requireAdmin(MANAGERS);
+  const file = fd.get("file");
+  if (!(file instanceof File) || file.size === 0) return redirect("/admin/postal?error=file");
+  if (file.size > 3 * 1024 * 1024) return redirect("/admin/postal?error=size");
+  const countries = await sql<{ iso2: string; postal_regex: string | null }[]>`select iso2, postal_regex from countries`;
+  const r = parsePostalCsv(
+    await file.text(),
+    new Set(countries.map((c) => c.iso2)),
+    new Map(countries.filter((c) => c.postal_regex).map((c): [string, string] => [c.iso2, c.postal_regex as string])),
+  );
+  if (r.error) return redirect("/admin/postal?error=header");
+  for (let i = 0; i < r.rows.length; i += 1000) {
+    await sql`insert into postal_codes ${sql(r.rows.slice(i, i + 1000), "country_iso2", "code", "place_name", "admin_name")}
+      on conflict (country_iso2, code, place_name) do nothing`;
+  }
+  await audit(admin.id, "postal.import", { rows: r.rows.length, rejected: r.rejected.length });
+  redirect(`/admin/postal?imported=${r.rows.length}&rejected=${r.rejected.length}`);
+}

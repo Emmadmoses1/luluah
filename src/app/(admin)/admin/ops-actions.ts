@@ -83,3 +83,24 @@ export async function updateCurrency(fd: FormData) {
   await audit(admin.id, "currency.update", { code, active, rate });
   back("saved=1");
 }
+
+// ---- Live exchange rates ----------------------------------------------------
+import { parseRates } from "@/lib/rates";
+
+export async function refreshRates() {
+  const admin = await requireAdmin(MANAGERS);
+  let json: unknown = null;
+  try {
+    const r = await fetch("https://open.er-api.com/v6/latest/BHD", { signal: AbortSignal.timeout(15000) });
+    if (r.ok) json = await r.json();
+  } catch { /* handled below */ }
+  const active = await sql<{ code: string }[]>`select code from currencies where is_active and code <> 'BHD'`;
+  const rates = parseRates(json, active.map((c) => c.code));
+  const codes = Object.keys(rates);
+  if (codes.length === 0) redirect("/admin/currencies?error=ratesfail&c=rates");
+  for (const code of codes) {
+    await sql`update currencies set rate_to_base = ${rates[code]}::numeric, rate_updated_at = now(), rate_source = 'open.er-api.com' where code = ${code}`;
+  }
+  await audit(admin.id, "currency.refresh", { updated: codes });
+  redirect("/admin/currencies?saved=1&c=rates");
+}

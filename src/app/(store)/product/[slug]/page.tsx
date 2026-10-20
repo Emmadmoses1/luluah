@@ -121,7 +121,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
             {inStock ? "متوفر" : "نفد المخزون"}
           </p>
           <p className="mt-6 leading-9 opacity-85 whitespace-pre-line">{p.description_ar}</p>
-          <AddToCart variants={variants} />
+          <AddToCart variants={variants} minQty={store.min_order_qty} maxQty={store.max_order_qty} />
 
           <div className="mt-10 space-y-3">
             <details className={row}><summary className={sum}>التوصيل{plus}</summary>
