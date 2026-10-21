@@ -19,7 +19,8 @@
     "places:purge": "node --env-file=.env scripts/places-purge.mjs",
     "places:fetch-osm": "node scripts/places-fetch-osm.mjs",
     "demo:remove": "node --env-file=.env scripts/remove-demo.mjs",
-    "db:repair-json": "node --env-file=.env scripts/repair-json.mjs"
+    "db:repair-json": "node --env-file=.env scripts/repair-json.mjs",
+    "doctor": "node --env-file=.env scripts/doctor.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.4",
