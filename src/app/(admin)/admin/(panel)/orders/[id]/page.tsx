@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { sql } from "@/lib/db";
 import { cancelOrder, updateOrder } from "@/app/(admin)/admin/order-actions";
+import { resendInvoice } from "@/app/(admin)/admin/email-actions";
 import Badge from "@/components/admin/Badge";
 import Field from "@/components/admin/Field";
 
@@ -122,6 +123,9 @@ export default async function OrderDetail({ params, searchParams }: {
               </div>
             )}
             {o.paid_at && <p className="px-5 pb-5 text-xs text-neutral-500">Confirmed paid at {fmt(o.paid_at)}</p>}
+            {o.payment_status === "paid" && o.customer_email && (
+              <form action={resendInvoice} className="px-5 pb-5"><input type="hidden" name="id" value={id} /><button className="a-btn-ghost">Email the invoice to the customer</button></form>
+            )}
           </section>
         </div>
 

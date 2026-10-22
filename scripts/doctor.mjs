@@ -23,7 +23,9 @@ const files = [
   "src/app/(store)/error.tsx", "src/app/(store)/layout.tsx", "src/app/(store)/page.tsx", "src/app/(store)/checkout/page.tsx", "src/app/(store)/cart/page.tsx",
   "src/app/(admin)/admin/ops-actions.ts", "src/app/(admin)/admin/manage-actions.ts", "src/app/(admin)/admin/catalog-actions.ts",
   "src/app/(admin)/admin/settings-actions.ts", "src/app/(admin)/admin/(panel)/postal/page.tsx", "src/app/(admin)/admin/(panel)/launch/page.tsx",
-  "db/migrations/007_places_postal.sql", "db/migrations/008_currency_rate_meta.sql", "db/migrations/009_product_spin.sql", "db/migrations/010_english_fields.sql",
+  "src/lib/mailer.ts", "src/lib/maintenance.ts", "src/lib/invoice-token.ts", "src/lib/cron-auth.ts", "src/app/api/cron/maintenance/route.ts",
+  "src/app/(invoice)/invoice/[ref]/page.tsx", "src/app/(admin)/admin/email-actions.ts", "src/app/(admin)/admin/(panel)/emails/page.tsx",
+  "db/migrations/011_invoices_reminders.sql", "db/migrations/007_places_postal.sql", "db/migrations/008_currency_rate_meta.sql", "db/migrations/009_product_spin.sql", "db/migrations/010_english_fields.sql",
 ];
 const missing = files.filter((f) => !existsSync(f));
 if (missing.length === 0) ok(`all ${files.length} expected files are present`);
@@ -37,6 +39,7 @@ env("DATABASE_URL") ? ok("DATABASE_URL is set") : no("DATABASE_URL is not set", 
 env("NOWPAYMENTS_API_KEY") && env("NOWPAYMENTS_IPN_SECRET") ? ok("payment provider keys are set") : wn("payment provider keys are not set (checkout creates unpaid orders only)");
 process.env.PAYMENTS_LIVE === "1" ? ok("PAYMENTS_LIVE=1 (orders are real)") : wn("PAYMENTS_LIVE is not 1 (every order is marked TEST)");
 env("RESEND_API_KEY") && env("EMAIL_FROM") ? ok("email is configured") : wn("email is not configured (no emails are sent)");
+env("CRON_SECRET") ? ok("CRON_SECRET is set (reminders and expiry can run)") : wn("CRON_SECRET is not set (reminder emails and automatic expiry will not run)");
 env("GOOGLE_TRANSLATE_API_KEY") || env("ANTHROPIC_API_KEY") ? ok("automatic translation key is set") : wn("no translation key (Arabic text must be typed by hand)");
 
 // ---- 3. Database ------------------------------------------------------------
@@ -57,6 +60,7 @@ else {
       ["cities", "geoname_id", "007"], ["postal_codes", "code", "007"], ["product_images", "thumb_path", "earlier"],
       ["admin_users", "must_change_password", "earlier"], ["media", "data", "earlier"], ["newsletter_subscribers", "email", "earlier"],
       ["store_settings", "value", "earlier"], ["discounts", "code", "earlier"], ["reviews", "status", "earlier"], ["payments", "status", "earlier"],
+      ["orders", "invoice_no", "011"], ["orders", "reminder_sent_at", "011"], ["email_log", "kind", "011"], ["job_runs", "name", "011"],
     ];
     const gaps = need.filter(([t, c]) => !hasC(t, c));
     if (gaps.length === 0) ok("every table and column the site needs exists");

@@ -4,6 +4,7 @@ import { verifyIpn } from "@/lib/payments/sig";
 import { amountMatches, canTransition, mapProviderStatus, type OrderPay } from "@/lib/payments/status";
 import { getPayment, type PaymentInfo } from "@/lib/payments/nowpayments";
 import { sendEmail } from "@/lib/email";
+import { sendInvoiceByRef } from "@/lib/mailer";
 import { adminNewOrderEmail, paymentConfirmedEmail } from "@/lib/email-templates";
 import { formatMoney } from "@/lib/currency";
 
@@ -129,8 +130,11 @@ export async function POST(req: Request) {
       const site = (process.env.SITE_URL ?? "").replace(/\/+$/, "");
       try {
         if (outcome.paidNow.email) {
-          const m = paymentConfirmedEmail({ name: outcome.paidNow.name, ref: outcome.paidNow.ref, siteUrl: site });
-          await sendEmail(outcome.paidNow.email, m.subject, m.html);
+          const sent = await sendInvoiceByRef(outcome.paidNow.ref);
+          if (!sent) {
+            const m = paymentConfirmedEmail({ name: outcome.paidNow.name, ref: outcome.paidNow.ref, siteUrl: site });
+            await sendEmail(outcome.paidNow.email, m.subject, m.html);
+          }
         }
         if (process.env.ADMIN_NOTIFY_EMAIL) {
           const a = adminNewOrderEmail({ ref: outcome.paidNow.ref, total: outcome.paidNow.total, country: outcome.paidNow.country });

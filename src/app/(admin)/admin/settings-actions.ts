@@ -33,6 +33,7 @@ export async function saveStoreSettings(fd: FormData) {
     ...store, ...social,
     announcement_ar: s(fd, "announcement_ar", 200), contact_email, contact_phone, whatsapp,
     address_ar: s(fd, "address_ar", 300), hours_ar: s(fd, "hours_ar", 200),
+    legal_name_ar: s(fd, "legal_name_ar", 150), tax_number: s(fd, "tax_number", 40),
     return_days: days, min_order_qty: minQ, max_order_qty: maxQ, show_demo_notice: fd.get("show_demo_notice") === "on",
   };
   await saveSetting("store", next);

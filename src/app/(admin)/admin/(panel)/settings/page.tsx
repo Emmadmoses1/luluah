@@ -58,6 +58,8 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
             <F label="WhatsApp number" name="whatsapp" v={s.whatsapp} dir="ltr" ph="+973 …" />
             <F label="Email" name="contact_email" v={s.contact_email} dir="ltr" />
             <F label="Working hours (Arabic)" name="hours_ar" v={s.hours_ar} dir="rtl" />
+            <F label="Registered business name (Arabic, printed on invoices)" name="legal_name_ar" v={s.legal_name_ar} dir="rtl" hint="Leave empty until you have your official name." />
+            <F label="Tax / VAT registration number (printed on invoices)" name="tax_number" v={s.tax_number} dir="ltr" hint="Only enter a real number issued to your business." />
           </div>
           <F label="Address (Arabic)" name="address_ar" v={s.address_ar} dir="rtl" />
         </section>

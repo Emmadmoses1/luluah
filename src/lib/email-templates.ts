@@ -34,3 +34,55 @@ export function orderShippedEmail(o: { name: string; ref: string; tracking: stri
 <p><a href="${esc(o.siteUrl)}/order/${esc(o.ref)}">متابعة حالة الطلب</a></p>`),
   };
 }
+
+// ---- Invoices, reminders and expiry notices ---------------------------------
+export const bhdFmt = (minor: number | string) => `${(Number(minor) / 1000).toFixed(3)} د.ب`;
+
+export type InvoiceData = {
+  invoiceNo: number; ref: string; name: string; date: string; countryAr: string; test: boolean; confirmed: boolean;
+  items: { name: string; variant: string | null; qty: number; unit: string; line: string }[];
+  subtotal: string; discount: string | null; shipping: string; total: string;
+  seller: { name: string; address: string; phone: string; email: string; tax: string };
+  link: string;
+};
+
+export function invoiceEmail(d: InvoiceData) {
+  const cell = "padding:8px 4px;border-bottom:1px solid #eee";
+  const items = d.items.map((i) => `<tr><td style="${cell}">${esc(i.name)}${i.variant ? `<br><span style="font-size:12px;opacity:.65">${esc(i.variant)}</span>` : ""}</td>
+<td style="${cell};text-align:center">${i.qty}</td><td style="${cell};text-align:left" dir="ltr">${esc(i.line)}</td></tr>`).join("");
+  const tot = (a: string, b: string, bold = false) => `<tr><td style="padding:4px 0;${bold ? "font-weight:bold;font-size:17px;" : ""}">${a}</td><td style="padding:4px 0;text-align:left;${bold ? "font-weight:bold;font-size:17px;" : ""}" dir="ltr">${esc(b)}</td></tr>`;
+  const s = d.seller;
+  const seller = [s.name && `<b>${esc(s.name)}</b>`, s.address && esc(s.address), s.phone && `<span dir="ltr">${esc(s.phone)}</span>`, s.email && `<span dir="ltr">${esc(s.email)}</span>`, s.tax && `الرقم الضريبي: <span dir="ltr">${esc(s.tax)}</span>`]
+    .filter(Boolean).join("<br>");
+  return {
+    subject: d.confirmed ? `تم تأكيد الدفع وهذه فاتورة طلبك ${showRef(d.ref)}` : `فاتورة طلبك ${showRef(d.ref)}`,
+    html: shell(d.confirmed ? "تم تأكيد الدفع" : "فاتورة", `${d.test ? `<p style="background:#fef3c7;padding:8px;text-align:center">نسخة تجريبية</p>` : ""}
+<p>مرحباً ${esc(d.name)}،</p><p>${d.confirmed ? "شكراً لك، تم تأكيد دفع طلبك. هذه فاتورتك:" : "هذه فاتورة طلبك:"}</p>
+<p style="font-size:13px">رقم الفاتورة: <b dir="ltr">${d.invoiceNo}</b><br>رقم الطلب: <b dir="ltr">${showRef(d.ref)}</b><br>التاريخ: ${esc(d.date)}<br>التوصيل إلى: ${esc(d.countryAr)}</p>
+<table style="width:100%;border-collapse:collapse;font-size:14px"><tr style="background:#faf6ee"><th style="text-align:right;padding:8px 4px">المنتج</th><th style="padding:8px 4px">الكمية</th><th style="text-align:left;padding:8px 4px">المبلغ</th></tr>${items}</table>
+<table style="width:100%;margin-top:12px;font-size:14px">${tot("المجموع الفرعي", d.subtotal)}${d.discount ? tot("الخصم", "-" + d.discount) : ""}${tot("الشحن", d.shipping)}${tot("الإجمالي", d.total, true)}</table>
+<p style="font-size:12px;opacity:.7">جميع المبالغ بالدينار البحريني.</p>
+${seller ? `<hr style="border:0;border-top:1px solid #eee"><p style="font-size:12px;line-height:1.8">${seller}</p>` : ""}
+<p><a href="${esc(d.link)}">عرض الفاتورة وطباعتها</a></p>`),
+  };
+}
+
+export function reminderEmail(o: { name: string; ref: string; total: string; siteUrl: string; hoursLeft: number }) {
+  return {
+    subject: `طلبك ${showRef(o.ref)} لم يكتمل بعد`,
+    html: shell("طلبك بانتظار إكمال الدفع", `<p>مرحباً ${esc(o.name)}،</p>
+<p>سجّلنا طلبك <b dir="ltr">${showRef(o.ref)}</b> بإجمالي <b>${esc(o.total)}</b>، لكن الدفع لم يكتمل بعد.</p>
+<p>يمكنك إكمال الدفع من صفحة الطلب. إذا لم يكتمل الدفع، سيُلغى الطلب تلقائياً خلال نحو ${o.hoursLeft.toLocaleString("ar")} ساعة وتُعاد القطع إلى المخزون.</p>
+<p><a href="${esc(o.siteUrl)}/order/${esc(o.ref)}" style="display:inline-block;background:#0c0a09;color:#c9a96e;padding:10px 22px;text-decoration:none">إكمال الدفع</a></p>
+<p style="font-size:12px;opacity:.7">إذا كنت قد دفعت بالفعل أو لم تعد ترغب بالطلب، يمكنك تجاهل هذه الرسالة.</p>`),
+  };
+}
+
+export function expiredEmail(o: { name: string; ref: string; siteUrl: string }) {
+  return {
+    subject: `تم إلغاء طلبك ${showRef(o.ref)}`,
+    html: shell("تم إلغاء الطلب", `<p>مرحباً ${esc(o.name)}،</p>
+<p>تم إلغاء طلبك <b dir="ltr">${showRef(o.ref)}</b> لأن الدفع لم يكتمل خلال المدة المحددة. لم يُخصم منك شيء عبر متجرنا.</p>
+<p>إذا كنت قد أرسلت دفعة، يرجى التواصل معنا مع ذكر رقم الطلب. وللطلب من جديد: <a href="${esc(o.siteUrl)}/shop">تصفّح المتجر</a></p>`),
+  };
+}

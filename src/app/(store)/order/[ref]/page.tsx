@@ -4,6 +4,7 @@ import { formatBHD } from "@/lib/money";
 import { getSettings, paymentsConfigured } from "@/lib/settings";
 import PayButton from "@/components/PayButton";
 import AutoRefresh from "@/components/AutoRefresh";
+import { invoiceToken } from "@/lib/invoice-token";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,7 @@ export default async function OrderPage({ params }: { params: Promise<{ ref: str
       {cancelled && <p className={`${note} bg-pearl`}>إن كنت قد دفعت، يرجى التواصل معنا.</p>}
       {payments.instructions_ar && awaiting && <p className={`${note} bg-pearl whitespace-pre-line`}>{payments.instructions_ar}</p>}
       {o.tracking_ref && <p className="mt-4 text-sm">رقم التتبع: <span dir="ltr" className="font-mono">{o.tracking_ref}</span></p>}
+      {o.payment_status === "paid" && <p className="mt-4"><a href={`/invoice/${ref}?t=${invoiceToken(ref)}`} className="btn-dark">عرض الفاتورة وطباعتها</a></p>}
 
       <section className="mt-8 rounded-3xl bg-ink text-pearl p-6">
         <h2 className="font-display text-2xl font-bold text-gold">ملخص الطلب</h2>
