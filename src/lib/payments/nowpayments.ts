@@ -21,16 +21,29 @@ export type PaymentInfo = {
   invoice_id?: number | string | null;
 };
 
-export function createInvoice(p: { amountUsd: string; orderRef: string; description: string; siteUrl: string }) {
+export function createInvoice(p: { amountUsd: string; orderRef: string; description: string; siteUrl: string; returnPath?: string }) {
   return call<Invoice>("/invoice", {
     method: "POST",
     body: JSON.stringify({
       price_amount: p.amountUsd, price_currency: "usd", order_id: p.orderRef, order_description: p.description,
       ipn_callback_url: `${p.siteUrl}/api/webhooks/nowpayments`,
-      success_url: `${p.siteUrl}/order/${p.orderRef}`, cancel_url: `${p.siteUrl}/order/${p.orderRef}`,
+      success_url: `${p.siteUrl}${p.returnPath ?? "/order/" + p.orderRef}`, cancel_url: `${p.siteUrl}${p.returnPath ?? "/order/" + p.orderRef}`,
       is_fixed_rate: true,
     }),
   });
 }
 
 export const getPayment = (id: string | number) => call<PaymentInfo>(`/payment/${encodeURIComponent(String(id))}`);
+
+export type DirectPayment = { payment_id: number | string; payment_status: string; pay_address: string; pay_amount: number | string; pay_currency: string };
+
+/** A payment with its own deposit address (used for card-to-crypto deposits). */
+export function createDirectPayment(p: { amountUsd: string; orderRef: string; payCurrency: string; description: string; siteUrl: string }) {
+  return call<DirectPayment>("/payment", {
+    method: "POST",
+    body: JSON.stringify({
+      price_amount: p.amountUsd, price_currency: "usd", pay_currency: p.payCurrency, order_id: p.orderRef,
+      order_description: p.description, ipn_callback_url: `${p.siteUrl}/api/webhooks/nowpayments`, is_fixed_rate: true,
+    }),
+  });
+}

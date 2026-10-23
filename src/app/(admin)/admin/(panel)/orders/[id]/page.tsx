@@ -90,7 +90,7 @@ export default async function OrderDetail({ params, searchParams }: {
           <section className="a-card overflow-hidden">
             <h2 className="px-5 py-4 font-semibold">Payments</h2>
             {pays.length === 0 ? (
-              <p className="px-5 pb-5 text-sm text-neutral-500">No payment has been started for this order.</p>
+              <p className="px-5 pb-5 text-sm text-neutral-500">No provider payment for this order (it was paid from the customer wallet, or payment has not started).</p>
             ) : (
               <div className="px-5 pb-5 space-y-4">
                 {pays.map((p) => (

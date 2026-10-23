@@ -7,6 +7,7 @@ import { sendEmail } from "@/lib/email";
 import { sendInvoiceByRef } from "@/lib/mailer";
 import { adminNewOrderEmail, paymentConfirmedEmail } from "@/lib/email-templates";
 import { formatMoney } from "@/lib/currency";
+import { applyDepositPayment, isDepositRef, notifyDepositCredited } from "@/lib/deposits";
 
 export const runtime = "nodejs";
 
@@ -57,6 +58,13 @@ export async function POST(req: Request) {
     if (!/^[A-Z2-9]{12}$/.test(ref) || (payload.order_id !== undefined && String(payload.order_id) !== ref)) {
       await sql`update payment_events set note = 'order reference mismatch' where provider = 'nowpayments' and event_key = ${eventKey}`;
       return NextResponse.json({ ok: true, ignored: true });
+    }
+
+    if (await isDepositRef(ref)) {
+      const dep = await applyDepositPayment(ref, paymentId, info);
+      await sql`update payment_events set note = ${"deposit: " + dep.note} where provider = 'nowpayments' and event_key = ${eventKey}`;
+      if (dep.credited) await notifyDepositCredited(dep.credited);
+      return NextResponse.json({ ok: true, deposit: true, note: dep.note });
     }
 
     const outcome = await sql.begin(async (tx): Promise<Outcome> => {

@@ -66,6 +66,12 @@ export default function CheckoutForm({ countries }: { countries: CountryOpt[] })
       .catch(() => setLoadErr(true));
   }, []);
 
+  useEffect(() => {
+    fetch("/api/account/me").then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (d?.account) setF((p) => ({ ...p, name: p.name || d.account.name || "", email: p.email || d.account.email || "", phone: p.phone || d.account.phone || "" }));
+    }).catch(() => {});
+  }, []);
+
   const postal = (f.postal ?? "").trim();
   useEffect(() => {
     if (bh || postal.length < 3) { setHits([]); return; }

@@ -86,3 +86,30 @@ export function expiredEmail(o: { name: string; ref: string; siteUrl: string }) 
 <p>إذا كنت قد أرسلت دفعة، يرجى التواصل معنا مع ذكر رقم الطلب. وللطلب من جديد: <a href="${esc(o.siteUrl)}/shop">تصفّح المتجر</a></p>`),
   };
 }
+
+// ---- Customer accounts and wallet ------------------------------------------------
+export function verifyAccountEmail(o: { name: string; link: string }) {
+  return {
+    subject: "أكّد بريدك الإلكتروني في لؤلؤة",
+    html: shell("تأكيد البريد الإلكتروني", `<p>مرحباً ${esc(o.name)}،</p><p>شكراً لتسجيلك. اضغط الزر لتأكيد بريدك الإلكتروني:</p>
+<p><a href="${esc(o.link)}" style="display:inline-block;background:#0c0a09;color:#c9a96e;padding:10px 22px;text-decoration:none">تأكيد البريد</a></p>
+<p style="font-size:12px;opacity:.7">ينتهي الرابط خلال ٢٤ ساعة. إذا لم تنشئ حساباً فتجاهل هذه الرسالة.</p>`),
+  };
+}
+
+export function resetPasswordEmail(o: { name: string; link: string }) {
+  return {
+    subject: "إعادة تعيين كلمة المرور",
+    html: shell("إعادة تعيين كلمة المرور", `<p>مرحباً ${esc(o.name)}،</p><p>طلبتَ إعادة تعيين كلمة المرور. اضغط الزر لاختيار كلمة مرور جديدة:</p>
+<p><a href="${esc(o.link)}" style="display:inline-block;background:#0c0a09;color:#c9a96e;padding:10px 22px;text-decoration:none">كلمة مرور جديدة</a></p>
+<p style="font-size:12px;opacity:.7">ينتهي الرابط خلال ساعتين. إذا لم تطلب ذلك فتجاهل هذه الرسالة، ولن يتغيّر شيء.</p>`),
+  };
+}
+
+export function depositEmail(o: { name: string; amount: string; balance: string; siteUrl: string }) {
+  return {
+    subject: "تمت إضافة رصيد إلى محفظتك",
+    html: shell("تمت إضافة الرصيد", `<p>مرحباً ${esc(o.name)}،</p><p>وصلت دفعتك وأُضيف <b>${esc(o.amount)}</b> إلى محفظتك.</p>
+<p>رصيدك الحالي: <b>${esc(o.balance)}</b></p><p><a href="${esc(o.siteUrl)}/account">فتح حسابي</a></p>`),
+  };
+}

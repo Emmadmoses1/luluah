@@ -4,6 +4,7 @@ import { formatBHD } from "@/lib/money";
 import { getSettings, paymentsConfigured } from "@/lib/settings";
 import PayButton from "@/components/PayButton";
 import AutoRefresh from "@/components/AutoRefresh";
+import WalletPayPanel from "@/components/account/WalletPayPanel";
 import { invoiceToken } from "@/lib/invoice-token";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +72,7 @@ export default async function OrderPage({ params }: { params: Promise<{ ref: str
       </div>
 
       {canPay && <PayButton refCode={ref} />}
+      <WalletPayPanel refCode={ref} totalMinor={Number(o.total_minor)} show={awaiting && !cancelled} />
       {awaiting && !cancelled && !canPay && (
         <p className={`${note} bg-pearl`}>تم تسجيل طلبك. الدفع بالعملات الرقمية غير متاح حالياً، وسنتواصل معك لإتمام الدفع. ولن يُعتبر الطلب مدفوعاً إلا بعد تأكيد الدفع فعلياً.</p>
       )}

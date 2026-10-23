@@ -14,6 +14,7 @@ import SiteFooter from "@/components/SiteFooter";
 import CookieNotice from "@/components/CookieNotice";
 import StickyHeader from "@/components/StickyHeader";
 import FloatingActions from "@/components/FloatingActions";
+import { getWalletSettings } from "@/lib/wallet";
 
 const cairo = Cairo({ subsets: ["arabic", "latin"], display: "swap", weight: ["300", "400", "600", "700", "800"], variable: "--font-body" });
 const amiri = Amiri({ subsets: ["arabic", "latin"], display: "swap", weight: ["400", "700"], variable: "--font-display" });
@@ -34,7 +35,7 @@ async function categories() {
 }
 
 export default async function StoreLayout({ children }: { children: React.ReactNode }) {
-  const [{ store }, cats, curs, cur] = await Promise.all([getSettings(), categories(), activeCurrencies(), getDisplayCurrency()]);
+  const [{ store }, cats, curs, cur, wallet] = await Promise.all([getSettings(), categories(), activeCurrencies(), getDisplayCurrency(), getWalletSettings()]);
   return (
     <html lang="ar" dir="rtl">
       <body className={`${cairo.variable} ${amiri.variable} font-[family-name:var(--font-body)] bg-ivory text-ink antialiased`}>
@@ -52,6 +53,11 @@ export default async function StoreLayout({ children }: { children: React.ReactN
             <div className="flex items-center gap-1 ms-auto md:ms-0 text-sm">
               <Link href="/track" className="hidden xl:inline u-link px-2">تتبّع الطلب</Link>
               <CurrencySelect codes={curs.map((c) => c.code)} current={cur.code} />
+              {wallet.enabled && (
+                <Link href="/account" aria-label="حسابي" className="p-2 hover:text-goldDeep transition-colors">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" /></svg>
+                </Link>
+              )}
               <CartLink />
             </div>
           </div>
